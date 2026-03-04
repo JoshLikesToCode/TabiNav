@@ -40,7 +40,7 @@ export function PlaceCard({ place, index, startTime, endTime }: PlaceCardProps) 
   return (
     <div className="group flex gap-3 rounded-xl border border-border bg-card p-4 shadow-card transition-shadow duration-150 hover:shadow-card-hover">
       {/* Index badge */}
-      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/8 text-base font-bold text-primary ring-1 ring-primary/15">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-primary/8 text-base font-bold text-primary ring-1 ring-primary/20">
         {index + 1}
       </div>
 

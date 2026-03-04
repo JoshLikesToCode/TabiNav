@@ -29,7 +29,7 @@ export default function LandingPage() {
               href="/t#demo"
               className="hidden rounded-lg px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground sm:block"
             >
-              Try demo
+              Try a demo
             </Link>
             <Link
               href="/build"

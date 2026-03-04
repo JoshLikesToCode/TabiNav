@@ -30,7 +30,7 @@ export function generateItinerary(
     .filter(
       (p) =>
         selectedTags.length === 0 ||
-        p.tags.some((t) => selectedTags.includes(t as InterestTag))
+        p.tags.some((t) => selectedTags.includes(t))
     )
     .sort((a, b) => b.popularity - a.popularity);
 

@@ -84,11 +84,6 @@ export function TripViewer() {
       .map((id) => getPlaceById(trip.city, id))
       .filter((p): p is Place => !!p);
 
-  const allPlaces = trip.dayPlans
-    .flatMap((d) => d.placeIds)
-    .map((id) => getPlaceById(trip.city, id))
-    .filter((p): p is Place => !!p);
-
   const activePlaces = dayPlaces(activeDay);
   const cityLabel = trip.city.charAt(0).toUpperCase() + trip.city.slice(1);
 
@@ -173,7 +168,7 @@ export function TripViewer() {
             {activePlaces.length} stops · Day {activeDay}
           </span>
           <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            Map coming Week 2
+            Map coming in Week 2
           </span>
         </div>
       </div>

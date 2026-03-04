@@ -238,7 +238,7 @@ export function TripWizard() {
                 </>
               ) : (
                 <>
-                  Generate my itinerary
+                  Build my itinerary
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}

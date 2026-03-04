@@ -3,7 +3,7 @@ import { TripViewer } from "@/components/trip/TripViewer";
 
 export const metadata: Metadata = {
   title: "Your Trip — TabiNav",
-  description: "Your personalised Tokyo itinerary, shareable with anyone.",
+  description: "Your personalized Tokyo itinerary, shareable with anyone.",
 };
 
 // Rendering is 100% client-side (reads URL hash after mount).

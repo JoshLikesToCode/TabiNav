@@ -5,18 +5,39 @@
   },
   "routes": [
     {
+      "route": "/",
+      "headers": { "Cache-Control": "no-cache" }
+    },
+    {
       "route": "/build",
-      "rewrite": "/build/index.html"
+      "rewrite": "/build/index.html",
+      "headers": { "Cache-Control": "no-cache" }
+    },
+    {
+      "route": "/build/",
+      "rewrite": "/build/index.html",
+      "headers": { "Cache-Control": "no-cache" }
     },
     {
       "route": "/t",
-      "rewrite": "/t/index.html"
+      "rewrite": "/t/index.html",
+      "headers": { "Cache-Control": "no-cache" }
+    },
+    {
+      "route": "/t/",
+      "rewrite": "/t/index.html",
+      "headers": { "Cache-Control": "no-cache" }
+    },
+    {
+      "route": "/_next/static/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
+    },
+    {
+      "route": "/images/*",
+      "headers": { "Cache-Control": "public, max-age=31536000, immutable" }
     }
   ],
-  "globalHeaders": {
-    "Cache-Control": "no-cache"
-  },
   "mimeTypes": {
-    ".json": "text/json"
+    ".json": "application/json"
   }
 }

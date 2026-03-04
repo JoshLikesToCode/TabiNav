@@ -9,6 +9,14 @@
 
 import type { Trip, City, BudgetLevel, InterestTag } from "./types";
 
+// Mirror the union types — keep in sync when adding new cities/budgets/tags
+const VALID_CITIES = new Set<string>(["tokyo"]);
+const VALID_BUDGETS = new Set<string>(["$", "$$", "$$$"]);
+const VALID_TAGS = new Set<string>([
+  "culture", "food", "nature", "shopping",
+  "nightlife", "art", "history", "anime", "architecture",
+]);
+
 interface HashPayload {
   v: 1;
   c: string;    // city code
@@ -60,6 +68,10 @@ export function decodeTripFromHash(hash: string): Trip | null {
     const json = fromBase64Url(hash);
     const raw = JSON.parse(json) as HashPayload;
     if (raw.v !== 1) return null;
+    if (!VALID_CITIES.has(raw.c)) return null;
+    if (!VALID_BUDGETS.has(raw.b)) return null;
+    if (!Array.isArray(raw.t) || raw.t.some((t) => !VALID_TAGS.has(t))) return null;
+    if (!Array.isArray(raw.i) || raw.i.some((day) => !Array.isArray(day))) return null;
 
     return {
       v: 1,

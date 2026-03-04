@@ -38,7 +38,7 @@ export function Hero() {
             {/* Sub-copy */}
             <p className="mb-8 text-lg leading-relaxed text-muted-foreground sm:text-xl">
               Tell us your style — culture, food, nightlife — and get a
-              personalised day-by-day Tokyo itinerary you can share with a
+              personalized day-by-day Tokyo itinerary you can share with a
               single link.
             </p>
 
