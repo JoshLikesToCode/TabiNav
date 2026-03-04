@@ -1,0 +1,22 @@
+{
+  "navigationFallback": {
+    "rewrite": "/index.html",
+    "exclude": ["/_next/static/*", "/images/*", "/*.{png,svg,ico,css,js}"]
+  },
+  "routes": [
+    {
+      "route": "/build",
+      "rewrite": "/build/index.html"
+    },
+    {
+      "route": "/t",
+      "rewrite": "/t/index.html"
+    }
+  ],
+  "globalHeaders": {
+    "Cache-Control": "no-cache"
+  },
+  "mimeTypes": {
+    ".json": "text/json"
+  }
+}

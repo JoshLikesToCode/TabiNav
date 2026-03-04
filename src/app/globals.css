@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design tokens ──────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Logo orange primary */
+    --primary: 22 87% 47%;
+    --primary-foreground: 0 0% 100%;
+
+    /* Warm off-white background */
+    --background: 42 33% 98%;
+    --foreground: 20 10% 12%;
+
+    /* Surface */
+    --card: 0 0% 100%;
+    --card-foreground: 20 10% 12%;
+
+    /* Muted / subtle tones */
+    --muted: 36 18% 95%;
+    --muted-foreground: 25 10% 48%;
+
+    /* Borders & inputs */
+    --border: 30 12% 89%;
+    --input: 30 12% 89%;
+
+    /* Focus ring */
+    --ring: 22 87% 47%;
+
+    /* Radii */
+    --radius: 0.625rem;
+  }
+
+  * {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    letter-spacing: -0.02em;
+  }
+}
+
+/* ─── Dot-grid hero background ───────────────────────────────────────────── */
+.hero-dot-grid {
+  background-image: radial-gradient(
+    hsl(var(--primary) / 0.12) 1px,
+    transparent 1px
+  );
+  background-size: 24px 24px;
+}
+
+/* ─── Scrollbar (trip viewer side panel) ─────────────────────────────────── */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(var(--border)) transparent;
+}
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: hsl(var(--border));
+  border-radius: 2px;
+}
+
+/* ─── Map placeholder shimmer ────────────────────────────────────────────── */
+.map-placeholder {
+  background: linear-gradient(
+    135deg,
+    hsl(210 40% 96%) 0%,
+    hsl(200 35% 93%) 50%,
+    hsl(195 30% 95%) 100%
+  );
+}
