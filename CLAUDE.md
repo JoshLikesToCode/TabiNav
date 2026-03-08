@@ -131,7 +131,7 @@ export interface Trip {
 
 ---
 
-## Itinerary Generation Strategy (Week 2)
+## Itinerary Generation Strategy
 
 1. Filter places where `cost` ≤ selected `budget` tier.
 2. Filter to places sharing at least one tag with `selectedTags` (skip if no tags chosen).
@@ -180,7 +180,6 @@ Do **not** implement K-means or advanced clustering yet.
 - **American English** throughout: `personalized`, `customize` (not British `-ised`/`-ise`).
 - Primary CTA: **"Build my trip"** (landing) / **"Build my itinerary"** (wizard submit button).
 - Demo link label: **"Try a demo"** (with article, consistent).
-- Map placeholder: **"Map coming in Week 2"** (consistent across mobile bar and MapPanel).
 - No-auth value prop: **"No account needed"** (short) or **"No sign-up required"** (long).
 
 ---

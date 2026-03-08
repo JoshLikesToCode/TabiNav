@@ -17,17 +17,19 @@ const VALID_TAGS = new Set<string>([
   "nightlife", "art", "history", "anime", "architecture",
 ]);
 
+/** Compact wire format stored in the URL hash. */
 interface HashPayload {
   v: 1;
-  c: string;    // city code
-  d: number;    // days
-  b: string;    // budget
-  t: string[];  // selectedTags
-  i: string[][]; // dayPlans: array of arrays of place IDs per day
+  c: string;     // city code
+  d: number;     // days
+  b: string;     // budget
+  t: string[];   // selectedTags
+  i: string[][]; // dayPlans: array of place-ID arrays, one per day
 }
 
+// ─── Base64url helpers ────────────────────────────────────────────────────────
+
 function toBase64Url(str: string): string {
-  // TextEncoder + btoa approach — works in browser and Node 16+
   const bytes = new TextEncoder().encode(str);
   let binary = "";
   for (let i = 0; i < bytes.byteLength; i++) {
@@ -50,6 +52,54 @@ function fromBase64Url(encoded: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+// ─── Validation ───────────────────────────────────────────────────────────────
+
+/**
+ * Validates an unknown JSON value against the HashPayload schema and domain
+ * constraints, then constructs a trusted Trip.  Returns null on any violation.
+ *
+ * All `as` narrowing assertions below are safe: each field is checked before
+ * it is cast.  This is the single boundary where untrusted data enters the
+ * type system.
+ */
+function validatePayload(raw: unknown): Trip | null {
+  if (typeof raw !== "object" || raw === null) return null;
+  const p = raw as Record<string, unknown>;
+
+  if (p.v !== 1) return null;
+  if (typeof p.c !== "string" || !VALID_CITIES.has(p.c)) return null;
+  if (typeof p.b !== "string" || !VALID_BUDGETS.has(p.b)) return null;
+  if (
+    !Array.isArray(p.t) ||
+    p.t.some((t) => typeof t !== "string" || !VALID_TAGS.has(t))
+  ) return null;
+  if (
+    typeof p.d !== "number" ||
+    !Number.isInteger(p.d) ||
+    p.d < 1 ||
+    p.d > 30
+  ) return null;
+  if (
+    !Array.isArray(p.i) ||
+    p.i.some((day) => !Array.isArray(day) || day.some((id) => typeof id !== "string"))
+  ) return null;
+  if (p.i.length !== p.d) return null;
+
+  return {
+    v: 1,
+    city: p.c as City,
+    days: p.d,
+    budget: p.b as BudgetLevel,
+    selectedTags: p.t as InterestTag[],
+    dayPlans: (p.i as string[][]).map((placeIds, idx) => ({
+      day: idx + 1,
+      placeIds,
+    })),
+  };
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 export function encodeTripToHash(trip: Trip): string {
   const payload: HashPayload = {
     v: 1,
@@ -65,36 +115,8 @@ export function encodeTripToHash(trip: Trip): string {
 export function decodeTripFromHash(hash: string): Trip | null {
   if (!hash) return null;
   try {
-    const json = fromBase64Url(hash);
-    const raw = JSON.parse(json) as HashPayload;
-    if (raw.v !== 1) return null;
-    if (!VALID_CITIES.has(raw.c)) return null;
-    if (!VALID_BUDGETS.has(raw.b)) return null;
-    if (!Array.isArray(raw.t) || raw.t.some((t) => !VALID_TAGS.has(t))) return null;
-    if (
-      typeof raw.d !== "number" ||
-      !Number.isInteger(raw.d) ||
-      raw.d < 1 ||
-      raw.d > 30
-    ) return null;
-    if (
-      !Array.isArray(raw.i) ||
-      raw.i.some((day) => !Array.isArray(day)) ||
-      raw.i.some((day) => day.some((id) => typeof id !== "string"))
-    ) return null;
-    if (raw.i.length !== raw.d) return null;
-
-    return {
-      v: 1,
-      city: raw.c as City,
-      days: raw.d,
-      budget: raw.b as BudgetLevel,
-      selectedTags: raw.t as InterestTag[],
-      dayPlans: (raw.i as string[][]).map((placeIds, idx) => ({
-        day: idx + 1,
-        placeIds,
-      })),
-    };
+    const raw: unknown = JSON.parse(fromBase64Url(hash));
+    return validatePayload(raw);
   } catch {
     return null;
   }

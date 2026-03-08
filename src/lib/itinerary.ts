@@ -1,7 +1,7 @@
 import type { Place, Trip, DayPlan, BudgetLevel, InterestTag, City } from "./types";
 import tokyoPlaces from "@/data/places.tokyo.v1.json";
 
-// ─── Data registry (extend here for Week 2 cities) ───────────────────────────
+// ─── Data registry (add an entry here when new cities ship) ──────────────────
 
 const CITY_PLACES: Record<City, Place[]> = {
   tokyo: tokyoPlaces as Place[],

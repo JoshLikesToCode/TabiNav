@@ -1,5 +1,6 @@
 import { clsx, type ClassValue } from "clsx";
 import { twMerge } from "tailwind-merge";
+import type { BudgetLevel } from "./types";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
@@ -38,14 +39,13 @@ export function formatDuration(mins: number): string {
   return `${h}h ${m}m`;
 }
 
-/** Format budget label. */
-export const BUDGET_LABELS: Record<string, string> = {
+export const BUDGET_LABELS: Record<BudgetLevel, string> = {
   $: "Budget",
   $$: "Moderate",
   $$$: "Premium",
 };
 
-export const BUDGET_DESCRIPTIONS: Record<string, string> = {
+export const BUDGET_DESCRIPTIONS: Record<BudgetLevel, string> = {
   $: "Under ¥5,000 / day",
   $$: "¥5,000–15,000 / day",
   $$$: "¥15,000+ / day",

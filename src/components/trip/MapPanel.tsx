@@ -31,14 +31,16 @@ export interface MapPanelProps {
 export function MapPanel({ places }: MapPanelProps) {
   const [mapLanguage, setMapLanguage] = useState<MapLanguage>("en");
 
-  // Clear any stale persisted preference so the map always starts on English.
-  // The toggle still writes to localStorage so a JP preference is remembered
-  // within the same browser tab, but a fresh page load always resets to EN.
+  // Read persisted preference after mount to avoid SSR mismatch.
+  // Defaults to "en" when no preference is stored (first visit).
   useEffect(() => {
-    localStorage.removeItem(STORAGE_KEY);
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored === "en" || stored === "jp") {
+      setMapLanguage(stored);
+    }
   }, []);
 
-  function toggleLanguage(lang: MapLanguage) {
+  function selectLanguage(lang: MapLanguage) {
     setMapLanguage(lang);
     localStorage.setItem(STORAGE_KEY, lang);
   }
@@ -49,7 +51,7 @@ export function MapPanel({ places }: MapPanelProps) {
       <div className="flex shrink-0 items-center justify-end border-b border-border px-3 py-1.5">
         <div className="flex overflow-hidden rounded-md border border-border text-xs font-medium">
           <button
-            onClick={() => toggleLanguage("en")}
+            onClick={() => selectLanguage("en")}
             className={`px-2.5 py-1 transition-colors ${
               mapLanguage === "en"
                 ? "bg-primary text-primary-foreground"
@@ -59,7 +61,7 @@ export function MapPanel({ places }: MapPanelProps) {
             EN
           </button>
           <button
-            onClick={() => toggleLanguage("jp")}
+            onClick={() => selectLanguage("jp")}
             className={`border-l border-border px-2.5 py-1 transition-colors ${
               mapLanguage === "jp"
                 ? "bg-primary text-primary-foreground"

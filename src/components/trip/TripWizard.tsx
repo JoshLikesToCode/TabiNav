@@ -8,14 +8,15 @@ import { Button } from "@/components/ui/button";
 import { generateItinerary } from "@/lib/itinerary";
 import { encodeTripToHash } from "@/lib/hash";
 import { cn, BUDGET_LABELS, BUDGET_DESCRIPTIONS } from "@/lib/utils";
-import type { City, BudgetLevel, InterestTag } from "@/lib/types";
+import type { BudgetLevel, InterestTag } from "@/lib/types";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-const CITIES: { id: City | "kyoto" | "osaka"; label: string; available: boolean }[] = [
-  { id: "tokyo", label: "Tokyo", available: true },
-  { id: "kyoto", label: "Kyoto", available: false },
-  { id: "osaka", label: "Osaka", available: false },
+// City is hardcoded to Tokyo in the generator; this list is UI-only.
+const CITIES: { label: string; available: boolean }[] = [
+  { label: "Tokyo", available: true },
+  { label: "Kyoto", available: false },
+  { label: "Osaka", available: false },
 ];
 
 const INTERESTS: { id: InterestTag; label: string; emoji: string }[] = [
@@ -82,7 +83,7 @@ export function TripWizard() {
             className="h-20 w-auto"
             priority
           />
-          <span className="text-xs text-muted-foreground">Tokyo · Week 1</span>
+          <span className="text-xs text-muted-foreground">Tokyo only</span>
         </div>
       </header>
 
@@ -102,11 +103,11 @@ export function TripWizard() {
           <Section
             number="01"
             title="Where are you going?"
-            hint="More cities coming in Week 2"
+            hint="More cities coming soon"
           >
             <div className="flex flex-wrap gap-2">
               {CITIES.map((city) => (
-                <div key={city.id} className="relative">
+                <div key={city.label} className="relative">
                   <button
                     disabled={!city.available}
                     className={cn(
@@ -147,8 +148,7 @@ export function TripWizard() {
               ))}
             </div>
             <p className="mt-2 text-xs text-muted-foreground">
-              {days} day{days !== 1 ? "s" : ""} ·{" "}
-              {days * 4} recommended stops
+              {days} day{days !== 1 ? "s" : ""} · up to 8 hours of activity per day
             </p>
           </Section>
 

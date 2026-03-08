@@ -1,8 +1,8 @@
 import { Clock, MapPin } from "lucide-react";
-import type { Place } from "@/lib/types";
+import type { Place, PlaceCategory, InterestTag } from "@/lib/types";
 import { cn, formatDuration } from "@/lib/utils";
 
-const CATEGORY_EMOJI: Record<string, string> = {
+const CATEGORY_EMOJI: Record<PlaceCategory, string> = {
   temple: "🏯",
   shrine: "⛩️",
   garden: "🌸",
@@ -15,7 +15,7 @@ const CATEGORY_EMOJI: Record<string, string> = {
   landmark: "📍",
 };
 
-const TAG_COLORS: Record<string, string> = {
+const TAG_COLORS: Record<InterestTag, string> = {
   culture: "bg-amber-50 text-amber-700",
   food: "bg-orange-50 text-orange-700",
   nature: "bg-green-50 text-green-700",
@@ -35,7 +35,7 @@ interface PlaceCardProps {
 }
 
 export function PlaceCard({ place, index, startTime, endTime }: PlaceCardProps) {
-  const emoji = CATEGORY_EMOJI[place.category] ?? "📍";
+  const emoji = CATEGORY_EMOJI[place.category];
 
   return (
     <div className="group flex gap-3 rounded-xl border border-border bg-card p-4 shadow-card transition-shadow duration-150 hover:shadow-card-hover">
@@ -87,7 +87,7 @@ export function PlaceCard({ place, index, startTime, endTime }: PlaceCardProps) 
               key={tag}
               className={cn(
                 "rounded-full px-2 py-0.5 text-[10px] font-semibold capitalize",
-                TAG_COLORS[tag] ?? "bg-muted text-muted-foreground"
+                TAG_COLORS[tag]
               )}
             >
               {tag}
