@@ -7,7 +7,9 @@ const CITY_PLACES: Record<City, Place[]> = {
   tokyo: tokyoPlaces as Place[],
 };
 
-const PLACES_PER_DAY = 4;
+// Each day is capped at 8 hours of activity; 30 minutes of travel between stops
+const MAX_DAY_MINUTES = 480;
+const TRAVEL_BUFFER_MINS = 30;
 const BUDGET_ORDER: BudgetLevel[] = ["$", "$$", "$$$"];
 
 // ─── Core generator ──────────────────────────────────────────────────────────
@@ -25,7 +27,7 @@ export function generateItinerary(
   const affordable = BUDGET_ORDER.slice(0, maxIdx + 1);
 
   // Filter by budget and tags, then sort by popularity descending
-  const filtered = allPlaces
+  const candidates = allPlaces
     .filter((p) => affordable.includes(p.cost))
     .filter(
       (p) =>
@@ -34,27 +36,45 @@ export function generateItinerary(
     )
     .sort((a, b) => b.popularity - a.popularity);
 
-  // Build pool without duplicates; loop the list if we don't have enough
-  const desired = days * PLACES_PER_DAY;
-  const pool: Place[] = [];
-  let pass = 0;
-  while (pool.length < desired && filtered.length > 0) {
-    const idx = pass % filtered.length;
-    const candidate = filtered[idx];
-    if (!pool.find((p) => p.id === candidate.id)) {
-      pool.push(candidate);
+  // Greedy time-based fill: consume candidates in order, rolling over to the
+  // next day whenever adding a place (plus a 30-min travel buffer) would
+  // exceed MAX_DAY_MINUTES.  The first place in each day always gets added
+  // regardless of duration so no place is ever silently skipped.
+  const dayPlans: DayPlan[] = [];
+  let dayIdx = 0;
+  let dayMinutes = 0;
+  let dayPlaceIds: string[] = [];
+
+  for (const place of candidates) {
+    if (dayIdx >= days) break;
+
+    const travel = dayPlaceIds.length === 0 ? 0 : TRAVEL_BUFFER_MINS;
+    const cost = travel + place.durationMins;
+
+    if (dayPlaceIds.length === 0 || dayMinutes + cost <= MAX_DAY_MINUTES) {
+      dayPlaceIds.push(place.id);
+      dayMinutes += cost;
+    } else {
+      // Current day is full — close it and retry this place on the next day
+      dayPlans.push({ day: dayIdx + 1, placeIds: dayPlaceIds });
+      dayIdx++;
+      if (dayIdx >= days) break;
+
+      dayPlaceIds = [place.id];
+      dayMinutes = place.durationMins;
     }
-    pass++;
-    // Safety valve — avoid infinite loop if filtered list is exhausted
-    if (pass > filtered.length * 3) break;
   }
 
-  const dayPlans: DayPlan[] = Array.from({ length: days }, (_, i) => ({
-    day: i + 1,
-    placeIds: pool
-      .slice(i * PLACES_PER_DAY, (i + 1) * PLACES_PER_DAY)
-      .map((p) => p.id),
-  }));
+  // Close the last in-progress day
+  if (dayIdx < days && dayPlaceIds.length > 0) {
+    dayPlans.push({ day: dayIdx + 1, placeIds: dayPlaceIds });
+    dayIdx++;
+  }
+
+  // Pad any remaining days with empty plans (edge case: few places, many days)
+  while (dayPlans.length < days) {
+    dayPlans.push({ day: dayPlans.length + 1, placeIds: [] });
+  }
 
   return { v: 1, city, days, selectedTags, budget, dayPlans };
 }

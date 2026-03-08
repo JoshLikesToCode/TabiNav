@@ -8,15 +8,38 @@ import L from "leaflet";
 import { useEffect, useRef } from "react";
 import type { Place } from "@/lib/types";
 
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+export type MapLanguage = "en" | "jp";
+
+// ─── Tile configuration ───────────────────────────────────────────────────────
+
+const TILE_CONFIGS: Record<MapLanguage, { url: string; attribution: string }> = {
+  // OSM Japan osm-bright style explicitly uses name:en as the primary label field,
+  // rendering romanised/English names for Japanese places.  Confirmed to show
+  // English labels in testing.  No subdomain rotation — single host.
+  en: {
+    url: "https://tile.openstreetmap.jp/styles/osm-bright/512/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors, &copy; <a href="https://openstreetmap.jp" target="_blank" rel="noreferrer">OpenStreetMap Japan</a>',
+  },
+  // Standard OSM tiles use the native `name` field — kanji/kana for Japanese POIs.
+  jp: {
+    url: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    attribution:
+      '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
+  },
+};
+
+// ─── Marker ───────────────────────────────────────────────────────────────────
+
 // Hex equivalent of --primary: hsl(22 87% 47%) ≈ rgb(224, 92, 16)
 const PRIMARY_HEX = "#E05C10";
 
 const TOKYO_CENTER: L.LatLngTuple = [35.6762, 139.6503];
 
-// ─── Custom numbered marker ───────────────────────────────────────────────────
 // DivIcon avoids the webpack asset-hashing problem that breaks Leaflet's
 // default PNG markers in Next.js (no _getIconUrl patch needed).
-
 function createNumberedIcon(index: number): L.DivIcon {
   return L.divIcon({
     className: "", // suppress Leaflet's default white square background
@@ -33,16 +56,18 @@ function createNumberedIcon(index: number): L.DivIcon {
   });
 }
 
-// ─── Component ───────────────────────────────────────────────────────────────
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export interface LeafletMapProps {
   places: Place[];
-  activeDay: number;
+  mapLanguage: MapLanguage;
 }
 
-export default function LeafletMap({ places }: LeafletMapProps) {
+export default function LeafletMap({ places, mapLanguage }: LeafletMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  // Tracks the active tile layer so we can swap it on language change
+  const tileLayerRef = useRef<L.TileLayer | null>(null);
   // Tracks the day-specific layers (markers + polyline) so we can swap them
   // when the active day changes without touching the base tile layer.
   const dayLayersRef = useRef<L.Layer[]>([]);
@@ -59,20 +84,30 @@ export default function LeafletMap({ places }: LeafletMapProps) {
       scrollWheelZoom: true,
     });
 
-    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a> contributors',
-    }).addTo(map);
-
     mapRef.current = map;
 
     return () => {
+      tileLayerRef.current = null;
       map.remove();
       mapRef.current = null;
     };
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // ── Update markers + polyline when active day changes ─────────────────────
+  // ── Swap tile layer when language changes ──────────────────────────────────
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map) return;
+
+    if (tileLayerRef.current) {
+      map.removeLayer(tileLayerRef.current);
+    }
+
+    const { url, attribution } = TILE_CONFIGS[mapLanguage];
+    const tile = L.tileLayer(url, { attribution }).addTo(map);
+    tileLayerRef.current = tile;
+  }, [mapLanguage]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Update markers + polyline when places change ───────────────────────────
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;

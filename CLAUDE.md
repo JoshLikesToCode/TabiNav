@@ -131,13 +131,15 @@ export interface Trip {
 
 ---
 
-## Itinerary Generation Strategy (Week 1)
+## Itinerary Generation Strategy (Week 2)
 
 1. Filter places where `cost` ≤ selected `budget` tier.
 2. Filter to places sharing at least one tag with `selectedTags` (skip if no tags chosen).
 3. **Sort by `popularity` descending.**
-4. Distribute evenly across selected days (4 places/day).
+4. Greedily fill each day with up to **480 minutes** (8 hours) of activity, using each place's `durationMins` plus a **30-minute travel buffer** between stops. Roll over to the next day when the limit is reached.
 5. Return stable, deterministic results — same inputs → same output.
+
+Constants: `MAX_DAY_MINUTES = 480`, `TRAVEL_BUFFER_MINS = 30`. No `PLACES_PER_DAY` constant — place count per day is determined by duration.
 
 Do **not** implement K-means or advanced clustering yet.
 
@@ -160,7 +162,7 @@ Do **not** implement K-means or advanced clustering yet.
 | `DayColumn` | Ordered place cards for one day |
 | `PlaceCard` | Single destination card with schedule time |
 | `ShareButton` | Copy-to-clipboard with toast feedback |
-| `MapPanel` | Coordinate-ready map placeholder (Leaflet — Week 2) |
+| `MapPanel` | Leaflet/OSM map with EN/JP tile toggle and localStorage persistence |
 
 ---
 
@@ -293,6 +295,32 @@ Provide a **Fix Pass** section if issues are found.
 **Fix:** Removed the trailing comma manually.
 **Lesson:** When deleting a JSON block, always check that the preceding entry's trailing comma is also removed.
 **Preventive guideline:** After any JSON file edit that removes a top-level key, re-read the file and verify the surrounding commas are consistent before running any command that parses it.
+
+---
+
+### Incident #009 — Map language toggle was inverted: wrong tile URLs assigned to wrong keys
+
+**Issue:** The EN button showed Japanese kanji labels; the 日本語 button showed English/romanized labels. Three rounds of debugging were required.
+**Root cause — what the tile servers actually render:**
+- `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png` (standard OSM) renders the OSM `name` field, which for Japanese POIs is in kanji/kana. This is the **Japanese** tile.
+- `https://tile.openstreetmap.jp/styles/osm-bright/512/{z}/{x}/{y}.png` (OSM Japan osm-bright style) explicitly prioritises `name:en` as its primary label field, rendering romanised/English place names. This is the **English** tile.
+- CartoDB Voyager (`basemaps.cartocdn.com/rastertiles/voyager`) was attempted as an English alternative; it uses `name:latin` which is sparsely populated in Tokyo OSM data, resulting in all-Japanese labels in practice. **Do not use CartoDB as an English tile source for Japan.**
+**Fix:** Assigned the correct URL to each key: `en → tile.openstreetmap.jp/styles/osm-bright`, `jp → tile.openstreetmap.org`.
+**Additional fix:** Removed localStorage restoration on mount so the map always opens on EN regardless of any stale stored preference from previous sessions.
+**Lesson:** Never assume a tile server's language behaviour — verify empirically in-browser. The standard OSM tile server renders in the local script of the data, not in English. The OSM Japan osm-bright style is the confirmed working source for English-readable Tokyo maps.
+**Preventive guideline:** When adding tile sources for language variants, note which OSM field each server uses (`name` vs `name:en` vs `name:latin`) as a code comment, and verify the rendered output before shipping.
+
+---
+
+### Incident #010 — Dead `activeDay` prop persisted across three components
+
+
+
+**Issue:** `LeafletMapProps` included `activeDay: number` which was accepted by `LeafletMap.tsx` but never used. `MapPanel.tsx` forwarded it blindly. `TripViewer.tsx` passed it at both call-sites. The prop carried zero information — the day filter was already applied upstream before passing `places`.
+**Root cause:** The prop was added during initial scaffold "just in case", then the component evolved to receive pre-filtered `places` and `activeDay` became dead weight. No type error surfaced because TypeScript has no "unused prop" warning for components.
+**Fix:** Removed `activeDay` from `LeafletMapProps`, added own `MapPanelProps`, and removed the prop from both `<MapPanel>` call-sites in `TripViewer.tsx`.
+**Lesson:** "Just in case" props accumulate coupling debt. A prop that is not read inside a component is a contract obligation with no return.
+**Preventive guideline:** When adding a prop to a component, use it immediately or don't add it. Audit prop interfaces when refactoring — treat unused props the same as unused variables.
 
 ---
 

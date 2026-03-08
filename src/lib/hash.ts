@@ -71,7 +71,18 @@ export function decodeTripFromHash(hash: string): Trip | null {
     if (!VALID_CITIES.has(raw.c)) return null;
     if (!VALID_BUDGETS.has(raw.b)) return null;
     if (!Array.isArray(raw.t) || raw.t.some((t) => !VALID_TAGS.has(t))) return null;
-    if (!Array.isArray(raw.i) || raw.i.some((day) => !Array.isArray(day))) return null;
+    if (
+      typeof raw.d !== "number" ||
+      !Number.isInteger(raw.d) ||
+      raw.d < 1 ||
+      raw.d > 30
+    ) return null;
+    if (
+      !Array.isArray(raw.i) ||
+      raw.i.some((day) => !Array.isArray(day)) ||
+      raw.i.some((day) => day.some((id) => typeof id !== "string"))
+    ) return null;
+    if (raw.i.length !== raw.d) return null;
 
     return {
       v: 1,

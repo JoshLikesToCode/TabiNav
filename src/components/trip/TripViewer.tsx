@@ -158,7 +158,7 @@ export function TripViewer() {
 
         {/* ── Right: map (hidden on mobile unless toggled) ── */}
         <main className="hidden flex-1 overflow-hidden p-4 lg:block">
-          <MapPanel places={activePlaces} activeDay={activeDay} />
+          <MapPanel places={activePlaces} />
         </main>
       </div>
 
@@ -179,7 +179,7 @@ export function TripViewer() {
         </div>
         {showMobileMap && (
           <div className="h-[40vh] overflow-hidden border-t border-border">
-            <MapPanel places={activePlaces} activeDay={activeDay} />
+            <MapPanel places={activePlaces} />
           </div>
         )}
       </div>
