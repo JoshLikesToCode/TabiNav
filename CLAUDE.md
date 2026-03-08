@@ -243,6 +243,59 @@ Provide a **Fix Pass** section if issues are found.
 
 ---
 
+### Incident #004 — react-leaflet peer dep conflict with React 19
+
+**Issue:** `react-leaflet@^4.2.1` declares `peerDependencies: { "react": "^17.0 || ^18.0" }`. Installing it into a React 19 project causes `npm install` to fail with a peer dependency conflict.
+**Root cause:** react-leaflet v4 was released before React 19 and its peer dep range wasn't updated. The library works fine at runtime with React 19; the conflict is only a version-range check.
+**Fix:** Added an `"overrides"` block to `package.json` pointing react-leaflet's peer dep at the project's own `$react` and `$react-dom` versions:
+```json
+"overrides": { "react-leaflet": { "react": "$react", "react-dom": "$react-dom" } }
+```
+**Lesson:** When adding libraries with outdated peer dep ranges to a bleeding-edge React project, use `overrides` (npm) rather than `--legacy-peer-deps` or `--force`, which are per-install flags that vanish from the project record.
+**Preventive guideline:** Before `npm install` of any UI library, check its `peerDependencies` against the project's React version. If stale, add `overrides` to `package.json` so the fix is committed with the project.
+
+---
+
+### Incident #005 — Leaflet default markers broken in Next.js (webpack asset hashing)
+
+**Issue:** Leaflet's default `L.Icon.Default` attempts to resolve its PNG assets via a `_getIconUrl` method at module load time. Webpack's content-hash renaming of image files breaks this URL lookup, producing broken marker icons or a runtime error.
+**Root cause:** Leaflet uses a CommonJS `require()` call inside `_getIconUrl` to locate the images. Webpack renames those assets and the relative path no longer resolves.
+**Fix:** Used `L.divIcon()` (custom HTML marker) for all markers instead of the default icon. No PNG assets are referenced, no `_getIconUrl` patch needed.
+**Lesson:** In any Next.js/webpack project, prefer `L.divIcon()` for Leaflet markers. It avoids the asset pipeline problem entirely, renders faster (no PNG fetch), and gives full design control.
+**Preventive guideline:** Never use `L.Icon.Default` in a Next.js project. Always define markers with `L.divIcon()` or supply explicit absolute icon URLs.
+
+---
+
+### Incident #006 — Leaflet `window` reference crashes static generation
+
+**Issue:** Importing Leaflet (even inside a `"use client"` component) caused the Next.js static export build to crash because Leaflet touches `window` at module evaluation time, before any React lifecycle runs.
+**Root cause:** `output: "export"` still runs a Node.js SSR pass to generate static HTML. `"use client"` marks a component as client-only at *runtime*, but the module is still imported and evaluated during the SSR/build phase.
+**Fix:** Used `next/dynamic` with `{ ssr: false }` to defer the entire Leaflet import to the browser. The `dynamic()` wrapper lives in `MapPanel.tsx`; the actual Leaflet code lives in `LeafletMap.tsx`.
+**Lesson:** `"use client"` alone is not sufficient to exclude browser-only libraries from the build phase. Any module that references `window`, `document`, or `navigator` at module load (not just inside component code) must be loaded via `dynamic({ ssr: false })`.
+**Preventive guideline:** For any third-party library that is known to use browser globals at load time (Leaflet, certain charting libs, etc.), always wrap it in a `dynamic` import with `ssr: false` regardless of whether the consumer already has `"use client"`.
+
+---
+
+### Incident #007 — react-leaflet `MapContainer` crashes with "Map container is already initialized"
+
+**Issue:** Using `react-leaflet`'s `<MapContainer>` in a Next.js project with React Strict Mode caused a runtime error: `"Map container is already initialized"`. The map worked on first load but threw on every subsequent mount.
+**Root cause:** React Strict Mode deliberately mounts effects twice in development to detect side effects. `react-leaflet` v4's `MapContainer` sets `_leaflet_id` on the container DOM element but does not reliably remove it in its cleanup — so the second mount attempt finds `_leaflet_id` already set and Leaflet throws.
+**Fix:** Replaced `react-leaflet`'s declarative `<MapContainer>` / `<TileLayer>` / `<Marker>` components with a fully imperative implementation using raw `useEffect` + `useRef`. The guard `if (mapRef.current) return` at the top of the initialization effect prevents double-init entirely — the second Strict Mode invocation is a no-op.
+**Lesson:** `react-leaflet`'s component API has a known, unfixed Strict Mode bug in v4. When using Leaflet in any React 18+ project (including Next.js dev mode), use the imperative `L.map()` / `useRef` pattern directly. This also removes the `react-leaflet` peer dep conflict with React 19.
+**Preventive guideline:** Do not use `react-leaflet`'s `MapContainer` in Next.js projects. Use `leaflet` directly with `useRef<L.Map>` + `useEffect` lifecycle management.
+
+---
+
+### Incident #008 — Trailing comma left in `package.json` after `overrides` block removal
+
+**Issue:** Editing `package.json` to remove the `"overrides"` block left a trailing comma after the `"devDependencies"` closing brace, making the file invalid JSON. `npm install` failed immediately.
+**Root cause:** JSON does not allow trailing commas. The edit removed the content of the block but left the comma separating it from the preceding block.
+**Fix:** Removed the trailing comma manually.
+**Lesson:** When deleting a JSON block, always check that the preceding entry's trailing comma is also removed.
+**Preventive guideline:** After any JSON file edit that removes a top-level key, re-read the file and verify the surrounding commas are consistent before running any command that parses it.
+
+---
+
 > Whenever Claude makes a structural mistake, breaks a build, introduces invalid imports, creates broken logic, causes a deployment failure, or suggests over-engineered solutions, it **must**:
 > 1. Acknowledge the mistake clearly.
 > 2. Explain why it happened.

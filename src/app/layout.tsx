@@ -10,6 +10,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://tabinav.com"),
   title: "TabiNav — Japan Trip Planner",
   description:
     "Plan your perfect Tokyo itinerary in minutes. Share with anyone via a single link — no account needed.",

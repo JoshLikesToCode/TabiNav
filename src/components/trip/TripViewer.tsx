@@ -23,6 +23,7 @@ export function TripViewer() {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [error, setError] = useState(false);
   const [activeDay, setActiveDay] = useState(1);
+  const [showMobileMap, setShowMobileMap] = useState(false);
 
   useEffect(() => {
     const hash = window.location.hash.replace("#", "").trim();
@@ -161,16 +162,26 @@ export function TripViewer() {
         </main>
       </div>
 
-      {/* ── Mobile: map teaser bar ── */}
-      <div className="border-t border-border bg-card px-4 py-3 lg:hidden">
-        <div className="flex items-center justify-between">
-          <span className="text-xs text-muted-foreground">
-            {activePlaces.length} stops · Day {activeDay}
-          </span>
-          <span className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-            Map coming in Week 2
-          </span>
+      {/* ── Mobile: map toggle bar + expandable map ── */}
+      <div className="flex-none lg:hidden">
+        <div className="border-t border-border bg-card px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">
+              {activePlaces.length} stops · Day {activeDay}
+            </span>
+            <button
+              onClick={() => setShowMobileMap((v) => !v)}
+              className="rounded-full bg-muted px-3 py-1 text-xs font-medium text-foreground transition-colors hover:bg-muted/70"
+            >
+              {showMobileMap ? "Hide map" : "Show map"}
+            </button>
+          </div>
         </div>
+        {showMobileMap && (
+          <div className="h-[40vh] overflow-hidden border-t border-border">
+            <MapPanel places={activePlaces} activeDay={activeDay} />
+          </div>
+        )}
       </div>
     </div>
   );
