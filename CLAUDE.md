@@ -45,9 +45,10 @@
 | Components | shadcn/ui pattern, CVA variants |
 | Icons | lucide-react |
 | Toasts | sonner |
+| Drag-and-drop | @dnd-kit/core + @dnd-kit/sortable |
 | Hosting | Azure Static Web Apps |
 
-**Persistence:** Trip encoded into URL hash (v=1 schema, base64url). Local dataset JSON bundled with frontend. No backend in Week 1.
+**Persistence:** Trip encoded into URL hash (v=1 schema, base64url). Local dataset JSON bundled with frontend. No backend.
 
 ---
 
@@ -163,6 +164,7 @@ Do **not** implement K-means or advanced clustering yet.
 | `PlaceCard` | Single destination card with schedule time |
 | `ShareButton` | Copy-to-clipboard with toast feedback |
 | `MapPanel` | Leaflet/OSM map with EN/JP tile toggle and localStorage persistence |
+| `SortablePlaceCard` | `useSortable` wrapper around PlaceCard with GripVertical drag handle |
 
 ---
 

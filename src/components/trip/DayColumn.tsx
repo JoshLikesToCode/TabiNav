@@ -1,14 +1,24 @@
+"use client";
+
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import { CalendarDays } from "lucide-react";
 import type { Place } from "@/lib/types";
-import { buildDaySchedule } from "@/lib/utils";
-import { PlaceCard } from "./PlaceCard";
+import { buildDaySchedule, formatDuration } from "@/lib/utils";
+import { SortablePlaceCard } from "./SortablePlaceCard";
 
 interface DayColumnProps {
   places: Place[];
 }
 
+// 30-minute travel buffer between stops, matching itinerary generator + buildDaySchedule
+const TRAVEL_BUFFER_MINS = 30;
+
 export function DayColumn({ places }: DayColumnProps) {
   const schedule = buildDaySchedule(places.map((p) => p.durationMins));
+
+  const totalMins =
+    places.reduce((sum, p) => sum + p.durationMins, 0) +
+    Math.max(0, places.length - 1) * TRAVEL_BUFFER_MINS;
 
   if (places.length === 0) {
     return (
@@ -20,22 +30,25 @@ export function DayColumn({ places }: DayColumnProps) {
   }
 
   return (
-    <div className="space-y-3">
-      {places.map((place, idx) => (
-        <PlaceCard
-          key={place.id}
-          place={place}
-          index={idx}
-          startTime={schedule[idx]?.startTime}
-          endTime={schedule[idx]?.endTime}
-        />
-      ))}
+    <SortableContext
+      items={places.map((p) => p.id)}
+      strategy={verticalListSortingStrategy}
+    >
+      <div className="space-y-3">
+        {places.map((place, idx) => (
+          <SortablePlaceCard
+            key={place.id}
+            place={place}
+            index={idx}
+            startTime={schedule[idx]?.startTime}
+            endTime={schedule[idx]?.endTime}
+          />
+        ))}
 
-      {/* End-of-day note */}
-      <p className="px-1 pt-1 text-xs text-muted-foreground/60">
-        Estimated end:{" "}
-        {schedule[schedule.length - 1]?.endTime ?? "—"}
-      </p>
-    </div>
+        <p className="px-1 pt-1 text-xs text-muted-foreground/60">
+          ~{formatDuration(totalMins)} total
+        </p>
+      </div>
+    </SortableContext>
   );
 }
