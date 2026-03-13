@@ -60,7 +60,7 @@ export default function LandingPage() {
               </span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Week 1 MVP · Tokyo only · No auth · No database
+              Tokyo · No account needed · No database
             </p>
           </div>
         </div>

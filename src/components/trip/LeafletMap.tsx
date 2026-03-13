@@ -6,7 +6,7 @@ import "leaflet/dist/leaflet.css";
 
 import L from "leaflet";
 import { useEffect, useRef } from "react";
-import type { Place } from "@/lib/types";
+import type { Place, City } from "@/lib/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -15,9 +15,9 @@ export type MapLanguage = "en" | "jp";
 // ─── Tile configuration ───────────────────────────────────────────────────────
 
 const TILE_CONFIGS: Record<MapLanguage, { url: string; attribution: string }> = {
-  // OSM Japan osm-bright style explicitly uses name:en as the primary label field,
-  // rendering romanised/English names for Japanese places.  Confirmed to show
-  // English labels in testing.  No subdomain rotation — single host.
+  // OSM Japan osm-bright style uses name:en as its primary label field,
+  // rendering romanised/English names for Japanese places.
+  // No subdomain rotation — single host.
   en: {
     url: "https://tile.openstreetmap.jp/styles/osm-bright/512/{z}/{x}/{y}.png",
     attribution:
@@ -31,12 +31,18 @@ const TILE_CONFIGS: Record<MapLanguage, { url: string; attribution: string }> = 
   },
 };
 
+// ─── City centers ─────────────────────────────────────────────────────────────
+// Used as the initial map position before fitBounds fires on the first places render.
+
+const CITY_CENTERS: Record<City, L.LatLngTuple> = {
+  tokyo: [35.6762, 139.6503],
+  kyoto: [35.0116, 135.7681],
+};
+
 // ─── Marker ───────────────────────────────────────────────────────────────────
 
 // Hex equivalent of --primary: hsl(22 87% 47%) ≈ rgb(224, 92, 16)
 const PRIMARY_HEX = "#E05C10";
-
-const TOKYO_CENTER: L.LatLngTuple = [35.6762, 139.6503];
 
 // DivIcon avoids the webpack asset-hashing problem that breaks Leaflet's
 // default PNG markers in Next.js (no _getIconUrl patch needed).
@@ -61,9 +67,10 @@ function createNumberedIcon(index: number): L.DivIcon {
 export interface LeafletMapProps {
   places: Place[];
   mapLanguage: MapLanguage;
+  city: City;
 }
 
-export default function LeafletMap({ places, mapLanguage }: LeafletMapProps) {
+export default function LeafletMap({ places, mapLanguage, city }: LeafletMapProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
   // Tracks the active tile layer so we can swap it on language change
@@ -79,7 +86,7 @@ export default function LeafletMap({ places, mapLanguage }: LeafletMapProps) {
     if (!containerRef.current || mapRef.current) return;
 
     const map = L.map(containerRef.current, {
-      center: TOKYO_CENTER,
+      center: CITY_CENTERS[city],
       zoom: 12,
       scrollWheelZoom: true,
     });
@@ -91,7 +98,7 @@ export default function LeafletMap({ places, mapLanguage }: LeafletMapProps) {
       map.remove();
       mapRef.current = null;
     };
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [city]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Swap tile layer when language changes ──────────────────────────────────
   useEffect(() => {

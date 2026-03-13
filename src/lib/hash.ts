@@ -10,7 +10,7 @@
 import type { Trip, City, BudgetLevel, InterestTag } from "./types";
 
 // Mirror the union types — keep in sync when adding new cities/budgets/tags
-const VALID_CITIES = new Set<string>(["tokyo"]);
+const VALID_CITIES = new Set<string>(["tokyo", "kyoto"]);
 const VALID_BUDGETS = new Set<string>(["$", "$$", "$$$"]);
 const VALID_TAGS = new Set<string>([
   "culture", "food", "nature", "shopping",

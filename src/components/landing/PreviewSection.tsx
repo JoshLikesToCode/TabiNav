@@ -130,8 +130,8 @@ export function PreviewSection() {
             Here&apos;s what your itinerary looks like
           </h2>
           <p className="text-lg text-muted-foreground">
-            A clean, day-by-day view of your trip — with estimated times and a
-            shareable link ready to go.
+            A clean, day-by-day view of your trip — drag to reorder any stop,
+            with estimated times and a shareable link ready to go.
           </p>
         </div>
         <div className="flex justify-center">

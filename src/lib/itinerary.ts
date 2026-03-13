@@ -1,10 +1,33 @@
 import type { Place, Trip, DayPlan, BudgetLevel, InterestTag, City } from "./types";
-import tokyoPlaces from "@/data/places.tokyo.v1.json";
+import rawTokyoPlaces from "@/data/places.tokyo.v1.json";
+import rawKyotoPlaces from "@/data/places.kyoto.v1.json";
+
+// ─── Dataset loader ───────────────────────────────────────────────────────────
+// Validates each JSON record at the dataset boundary, replacing the unsafe
+// `as Place[]` cast.  Enum fields are trusted from the data file; the hash
+// decoder handles enum validation at the network boundary.
+
+function loadPlaces(data: unknown): Place[] {
+  if (!Array.isArray(data)) return [];
+  return data.filter((item): item is Place => {
+    if (typeof item !== "object" || item === null) return false;
+    const p = item as Record<string, unknown>;
+    return (
+      typeof p.id === "string" &&
+      typeof p.name === "string" &&
+      typeof p.nameJa === "string" &&
+      typeof p.lat === "number" &&
+      typeof p.lng === "number" &&
+      typeof p.durationMins === "number"
+    );
+  });
+}
 
 // ─── Data registry (add an entry here when new cities ship) ──────────────────
 
 const CITY_PLACES: Record<City, Place[]> = {
-  tokyo: tokyoPlaces as Place[],
+  tokyo: loadPlaces(rawTokyoPlaces),
+  kyoto: loadPlaces(rawKyotoPlaces),
 };
 
 // Each day is capped at 8 hours of activity; 30 minutes of travel between stops

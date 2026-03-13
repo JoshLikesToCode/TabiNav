@@ -13,7 +13,7 @@ const STEPS = [
     step: "02",
     title: "Get your itinerary",
     description:
-      "We curate a day-by-day schedule with the best spots for your preferences, complete with estimated times.",
+      "We curate a day-by-day schedule with the best spots for your preferences, complete with estimated times. Drag to reorder or move stops between days.",
   },
   {
     icon: Share2,

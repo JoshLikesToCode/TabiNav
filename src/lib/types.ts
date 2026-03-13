@@ -1,6 +1,6 @@
 // ─── Domain types ───────────────────────────────────────────────────────────
 
-export type City = "tokyo"; // | "kyoto" | "osaka" — Week 2+
+export type City = "tokyo" | "kyoto"; // osaka — coming soon
 
 export type BudgetLevel = "$" | "$$" | "$$$";
 

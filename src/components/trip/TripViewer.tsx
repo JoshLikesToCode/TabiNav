@@ -4,40 +4,21 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, MapPin, Calendar, Wallet } from "lucide-react";
-import {
-  DndContext,
-  DragOverlay,
-  PointerSensor,
-  TouchSensor,
-  useDroppable,
-  useSensor,
-  useSensors,
-  pointerWithin,
-  closestCenter,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
-import { decodeTripFromHash, encodeTripToHash } from "@/lib/hash";
-import { generateItinerary, getPlaceById } from "@/lib/itinerary";
-import { reorderDay, movePlaceToDay } from "@/lib/tripEdit";
-import type { Trip, Place } from "@/lib/types";
+import { DndContext, DragOverlay, useDroppable } from "@dnd-kit/core";
+import { encodeTripToHash } from "@/lib/hash";
+import { getPlaceById } from "@/lib/itinerary";
+import type { Place } from "@/lib/types";
 import { BUDGET_LABELS } from "@/lib/utils";
+import { useTripLoader } from "@/hooks/useTripLoader";
+import { useDragHandlers, DAY_TAB_PREFIX } from "@/hooks/useDragHandlers";
 import { DayColumn } from "./DayColumn";
 import { MapPanel } from "./MapPanel";
 import { PlaceCard } from "./PlaceCard";
 import { ShareButton } from "./ShareButton";
 
-// ─── Demo trip ────────────────────────────────────────────────────────────────
-
-function getDemoTrip(): Trip {
-  return generateItinerary("tokyo", 3, ["culture", "food", "nature"], "$$");
-}
-
 // ─── Droppable day tab ────────────────────────────────────────────────────────
-// Extracted as a component so it can call useDroppable (hooks can't be called
-// conditionally or inside loops at the parent level).
-
-const DAY_TAB_PREFIX = "day-tab-";
+// Extracted as a component so useDroppable can be called per-tab without
+// violating the rules of hooks (no hooks inside .map()).
 
 function DroppableDayTab({
   day,
@@ -72,111 +53,27 @@ function DroppableDayTab({
 // ─── Component ────────────────────────────────────────────────────────────────
 
 export function TripViewer() {
-  const [trip, setTrip] = useState<Trip | null>(null);
-  const [error, setError] = useState(false);
+  const { trip, setTrip, error } = useTripLoader();
   const [activeDay, setActiveDay] = useState(1);
   const [showMobileMap, setShowMobileMap] = useState(false);
-  const [activeDragId, setActiveDragId] = useState<string | null>(null);
-  // Track which day tab the drag pointer is currently over (for highlight)
-  const [dragOverDay, setDragOverDay] = useState<number | null>(null);
 
-  // ── Load trip from hash ──
-  useEffect(() => {
-    const hash = window.location.hash.replace("#", "").trim();
-
-    if (!hash || hash === "demo") {
-      setTrip(getDemoTrip());
-      return;
-    }
-
-    const decoded = decodeTripFromHash(hash);
-    if (decoded) {
-      setTrip(decoded);
-    } else {
-      setError(true);
-    }
-  }, []);
-
-  // ── Sync URL hash whenever trip changes so ShareButton always shares current state ──
+  // Sync URL hash whenever trip changes so ShareButton always shares current state.
   useEffect(() => {
     if (!trip) return;
     const hash = encodeTripToHash(trip);
     window.history.replaceState(null, "", `#${hash}`);
   }, [trip]);
 
-  // ── dnd-kit sensors ──
-  // PointerSensor: 8px activation distance prevents accidental drags on click.
-  // TouchSensor: 250ms press delay gives mobile users time to scroll first.
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 5 } })
-  );
-
-  // ── Collision detection ──
-  // pointerWithin first: ensures day tabs are hit when the pointer physically
-  // overlaps them.  Falls back to closestCenter for within-list reordering.
-  function collisionDetection(args: Parameters<typeof pointerWithin>[0]) {
-    const hits = pointerWithin(args);
-    if (hits.length > 0) return hits;
-    return closestCenter(args);
-  }
-
-  // ── Drag handlers ──
-  function handleDragStart({ active }: DragStartEvent) {
-    setActiveDragId(active.id as string);
-  }
-
-  function handleDragOver({ over }: { over: DragEndEvent["over"] }) {
-    if (!over) {
-      setDragOverDay(null);
-      return;
-    }
-    const id = over.id as string;
-    if (id.startsWith(DAY_TAB_PREFIX)) {
-      setDragOverDay(parseInt(id.slice(DAY_TAB_PREFIX.length), 10));
-    } else {
-      setDragOverDay(null);
-    }
-  }
-
-  function handleDragEnd({ active, over }: DragEndEvent) {
-    setActiveDragId(null);
-    setDragOverDay(null);
-
-    if (!over || !trip) return;
-
-    const placeId = active.id as string;
-    const overId = over.id as string;
-
-    // ── Cross-day move: dropped on a day tab ──
-    if (overId.startsWith(DAY_TAB_PREFIX)) {
-      const targetDay = parseInt(overId.slice(DAY_TAB_PREFIX.length), 10);
-      if (targetDay !== activeDay) {
-        setTrip((prev) =>
-          prev ? movePlaceToDay(prev, placeId, activeDay, targetDay) : prev
-        );
-      }
-      return;
-    }
-
-    // ── Within-day reorder: dropped on another place card ──
-    if (placeId !== overId) {
-      const plan = trip.dayPlans.find((d) => d.day === activeDay);
-      if (!plan) return;
-      const oldIdx = plan.placeIds.indexOf(placeId);
-      const newIdx = plan.placeIds.indexOf(overId);
-      if (oldIdx !== -1 && newIdx !== -1) {
-        setTrip((prev) =>
-          prev ? reorderDay(prev, activeDay, oldIdx, newIdx) : prev
-        );
-      }
-    }
-  }
-
-  function handleDragCancel() {
-    setActiveDragId(null);
-    setDragOverDay(null);
-  }
+  const {
+    sensors,
+    collisionDetection,
+    activeDragId,
+    dragOverDay,
+    handleDragStart,
+    handleDragOver,
+    handleDragEnd,
+    handleDragCancel,
+  } = useDragHandlers({ trip, setTrip, activeDay });
 
   // ── Error state ──
   if (error) {
@@ -216,7 +113,7 @@ export function TripViewer() {
     );
   }
 
-  // ── Resolve places ──
+  // ── Resolve places for a given day ──
   const dayPlaces = (day: number): Place[] =>
     (trip.dayPlans.find((d) => d.day === day)?.placeIds ?? [])
       .map((id) => getPlaceById(trip.city, id))
@@ -224,8 +121,6 @@ export function TripViewer() {
 
   const activePlaces = dayPlaces(activeDay);
   const cityLabel = trip.city.charAt(0).toUpperCase() + trip.city.slice(1);
-
-  // Place being dragged — used by DragOverlay
   const activeDragPlace = activeDragId
     ? getPlaceById(trip.city, activeDragId)
     : null;
@@ -309,7 +204,7 @@ export function TripViewer() {
 
           {/* ── Right: map ── */}
           <main className="hidden flex-1 overflow-hidden p-4 lg:block">
-            <MapPanel places={activePlaces} />
+            <MapPanel places={activePlaces} city={trip.city} />
           </main>
         </div>
 
@@ -330,7 +225,7 @@ export function TripViewer() {
           </div>
           {showMobileMap && (
             <div className="h-[40vh] overflow-hidden border-t border-border">
-              <MapPanel places={activePlaces} />
+              <MapPanel places={activePlaces} city={trip.city} />
             </div>
           )}
         </div>

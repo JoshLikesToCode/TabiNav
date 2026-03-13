@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import type { Place } from "@/lib/types";
+import type { Place, City } from "@/lib/types";
 import type { MapLanguage } from "./LeafletMap";
 
 const STORAGE_KEY = "tabinav-map-lang";
@@ -26,9 +26,10 @@ const LeafletMap = dynamic(() => import("./LeafletMap"), {
 
 export interface MapPanelProps {
   places: Place[];
+  city: City;
 }
 
-export function MapPanel({ places }: MapPanelProps) {
+export function MapPanel({ places, city }: MapPanelProps) {
   const [mapLanguage, setMapLanguage] = useState<MapLanguage>("en");
 
   // Read persisted preference after mount to avoid SSR mismatch.
@@ -75,7 +76,7 @@ export function MapPanel({ places }: MapPanelProps) {
 
       {/* Map */}
       <div className="flex-1 overflow-hidden">
-        <LeafletMap places={places} mapLanguage={mapLanguage} />
+        <LeafletMap places={places} mapLanguage={mapLanguage} city={city} />
       </div>
     </div>
   );

@@ -8,16 +8,17 @@ import { Button } from "@/components/ui/button";
 import { generateItinerary } from "@/lib/itinerary";
 import { encodeTripToHash } from "@/lib/hash";
 import { cn, BUDGET_LABELS, BUDGET_DESCRIPTIONS } from "@/lib/utils";
-import type { BudgetLevel, InterestTag } from "@/lib/types";
+import type { BudgetLevel, InterestTag, City } from "@/lib/types";
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-// City is hardcoded to Tokyo in the generator; this list is UI-only.
-const CITIES: { label: string; available: boolean }[] = [
-  { label: "Tokyo", available: true },
-  { label: "Kyoto", available: false },
-  { label: "Osaka", available: false },
+const CITIES: { id: City; label: string }[] = [
+  { id: "tokyo", label: "Tokyo" },
+  { id: "kyoto", label: "Kyoto" },
 ];
+
+// Cities that are planned but not yet supported — shown as disabled chips.
+const CITIES_SOON: string[] = ["Osaka"];
 
 const INTERESTS: { id: InterestTag; label: string; emoji: string }[] = [
   { id: "culture", label: "Culture", emoji: "🏯" },
@@ -36,6 +37,7 @@ const BUDGETS: BudgetLevel[] = ["$", "$$", "$$$"];
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function TripWizard() {
+  const [city, setCity] = useState<City>("tokyo");
   const [days, setDays] = useState(3);
   const [tags, setTags] = useState<InterestTag[]>([]);
   const [budget, setBudget] = useState<BudgetLevel>("$$");
@@ -52,7 +54,7 @@ export function TripWizard() {
     // Give the UI a frame to show the loading state before the sync work
     requestAnimationFrame(() => {
       try {
-        const trip = generateItinerary("tokyo", days, tags, budget);
+        const trip = generateItinerary(city, days, tags, budget);
         const hash = encodeTripToHash(trip);
         window.location.href = `/t#${hash}`;
       } catch {
@@ -83,7 +85,7 @@ export function TripWizard() {
             className="h-20 w-auto"
             priority
           />
-          <span className="text-xs text-muted-foreground">Tokyo only</span>
+          <div className="w-16" aria-hidden />
         </div>
       </header>
 
@@ -103,27 +105,34 @@ export function TripWizard() {
           <Section
             number="01"
             title="Where are you going?"
-            hint="More cities coming soon"
+            hint="Osaka coming soon"
           >
             <div className="flex flex-wrap gap-2">
-              {CITIES.map((city) => (
-                <div key={city.label} className="relative">
-                  <button
-                    disabled={!city.available}
-                    className={cn(
-                      "rounded-xl border px-5 py-3 text-sm font-semibold transition-all",
-                      city.available
-                        ? "border-primary bg-primary/8 text-primary ring-1 ring-primary/20"
-                        : "cursor-not-allowed border-border bg-muted/40 text-muted-foreground opacity-50"
-                    )}
-                  >
-                    {city.label}
-                  </button>
-                  {!city.available && (
-                    <span className="absolute -right-1 -top-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
-                      Soon
-                    </span>
+              {CITIES.map((c) => (
+                <button
+                  key={c.id}
+                  onClick={() => setCity(c.id)}
+                  className={cn(
+                    "rounded-xl border px-5 py-3 text-sm font-semibold transition-all",
+                    c.id === city
+                      ? "border-primary bg-primary/8 text-primary ring-1 ring-primary/20"
+                      : "border-border bg-card text-foreground hover:border-primary/30 hover:bg-primary/5"
                   )}
+                >
+                  {c.label}
+                </button>
+              ))}
+              {CITIES_SOON.map((label) => (
+                <div key={label} className="relative">
+                  <button
+                    disabled
+                    className="cursor-not-allowed rounded-xl border border-border bg-muted/40 px-5 py-3 text-sm font-semibold text-muted-foreground opacity-50"
+                  >
+                    {label}
+                  </button>
+                  <span className="absolute -right-1 -top-1.5 rounded-full bg-muted px-1.5 py-0.5 text-[9px] font-bold uppercase text-muted-foreground">
+                    Soon
+                  </span>
                 </div>
               ))}
             </div>
