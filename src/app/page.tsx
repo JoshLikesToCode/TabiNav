@@ -60,7 +60,7 @@ export default function LandingPage() {
               </span>
             </p>
             <p className="text-xs text-muted-foreground">
-              Tokyo · No account needed · No database
+              Tokyo &amp; Kyoto · No account needed · Shareable link
             </p>
           </div>
         </div>

@@ -3,9 +3,20 @@ import rawTokyoPlaces from "@/data/places.tokyo.v1.json";
 import rawKyotoPlaces from "@/data/places.kyoto.v1.json";
 
 // ─── Dataset loader ───────────────────────────────────────────────────────────
-// Validates each JSON record at the dataset boundary, replacing the unsafe
-// `as Place[]` cast.  Enum fields are trusted from the data file; the hash
-// decoder handles enum validation at the network boundary.
+// Validates every required Place field at the dataset boundary.
+// Malformed entries are silently dropped so a single bad record never
+// corrupts the entire city dataset.
+
+const VALID_PLACE_CITIES = new Set<string>(["tokyo", "kyoto"]);
+const VALID_PLACE_CATEGORIES = new Set<string>([
+  "temple", "shrine", "garden", "food", "shopping",
+  "museum", "entertainment", "park", "district", "landmark",
+]);
+const VALID_PLACE_TAGS = new Set<string>([
+  "culture", "food", "nature", "shopping", "nightlife",
+  "art", "history", "anime", "architecture", "entertainment",
+]);
+const VALID_PLACE_COSTS = new Set<string>(["$", "$$", "$$$"]);
 
 function loadPlaces(data: unknown): Place[] {
   if (!Array.isArray(data)) return [];
@@ -13,12 +24,20 @@ function loadPlaces(data: unknown): Place[] {
     if (typeof item !== "object" || item === null) return false;
     const p = item as Record<string, unknown>;
     return (
-      typeof p.id === "string" &&
-      typeof p.name === "string" &&
+      typeof p.id === "string" && p.id.length > 0 &&
+      typeof p.name === "string" && p.name.length > 0 &&
       typeof p.nameJa === "string" &&
+      typeof p.city === "string" && VALID_PLACE_CITIES.has(p.city) &&
+      typeof p.category === "string" && VALID_PLACE_CATEGORIES.has(p.category) &&
+      Array.isArray(p.tags) &&
+      (p.tags as unknown[]).every((t) => typeof t === "string" && VALID_PLACE_TAGS.has(t)) &&
+      typeof p.cost === "string" && VALID_PLACE_COSTS.has(p.cost) &&
+      typeof p.durationMins === "number" && p.durationMins > 0 &&
+      typeof p.popularity === "number" && p.popularity >= 0 && p.popularity <= 100 &&
+      typeof p.description === "string" && p.description.length > 0 &&
+      typeof p.area === "string" && p.area.length > 0 &&
       typeof p.lat === "number" &&
-      typeof p.lng === "number" &&
-      typeof p.durationMins === "number"
+      typeof p.lng === "number"
     );
   });
 }
@@ -35,6 +54,94 @@ const MAX_DAY_MINUTES = 480;
 const TRAVEL_BUFFER_MINS = 30;
 const BUDGET_ORDER: BudgetLevel[] = ["$", "$$", "$$$"];
 
+// Areas within this radius of the anchor are eligible for same-day fill
+const NEARBY_AREA_KM = 5;
+
+// ─── Area-aware itinerary helpers ─────────────────────────────────────────────
+
+interface AreaGroup {
+  area: string;
+  places: Place[];                      // sorted popularity desc
+  centroid: { lat: number; lng: number };
+  score: number;                        // sum of popularity — used for anchor ranking
+}
+
+function buildAreaGroups(places: Place[]): AreaGroup[] {
+  const byArea = new Map<string, Place[]>();
+  for (const place of places) {
+    const group = byArea.get(place.area) ?? [];
+    group.push(place);
+    byArea.set(place.area, group);
+  }
+  const groups: AreaGroup[] = [];
+  for (const [area, areaPlaces] of byArea) {
+    const sorted = [...areaPlaces].sort((a, b) => b.popularity - a.popularity);
+    const centroid = {
+      lat: areaPlaces.reduce((s, p) => s + p.lat, 0) / areaPlaces.length,
+      lng: areaPlaces.reduce((s, p) => s + p.lng, 0) / areaPlaces.length,
+    };
+    const score = areaPlaces.reduce((s, p) => s + p.popularity, 0);
+    groups.push({ area, places: sorted, centroid, score });
+  }
+  return groups.sort((a, b) => b.score - a.score);
+}
+
+// Haversine distance — fast approximation sufficient for city-scale distances
+function distanceKm(
+  a: { lat: number; lng: number },
+  b: { lat: number; lng: number }
+): number {
+  const R = 6371;
+  const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+  const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+  const sinLat = Math.sin(dLat / 2);
+  const sinLng = Math.sin(dLng / 2);
+  const h =
+    sinLat * sinLat +
+    Math.cos((a.lat * Math.PI) / 180) *
+      Math.cos((b.lat * Math.PI) / 180) *
+      sinLng * sinLng;
+  return R * 2 * Math.asin(Math.sqrt(h));
+}
+
+// Greedily fills dayPlaceIds from candidates, mutating dayPlaceIds and remaining.
+// Returns the updated dayMinutes total.
+function greedyFill(
+  candidates: Place[],
+  dayPlaceIds: string[],
+  dayMinutes: number,
+  remaining: Map<string, Place>
+): number {
+  for (const place of candidates) {
+    if (!remaining.has(place.id)) continue;
+    const travel = dayPlaceIds.length === 0 ? 0 : TRAVEL_BUFFER_MINS;
+    const cost = travel + place.durationMins;
+    if (dayPlaceIds.length === 0 || dayMinutes + cost <= MAX_DAY_MINUTES) {
+      dayPlaceIds.push(place.id);
+      dayMinutes += cost;
+      remaining.delete(place.id);
+    }
+  }
+  return dayMinutes;
+}
+
+// Mean pairwise distance of a day's places mapped to a 0–100 coherence score.
+// 100 = all places in the same spot; 0 = mean pair is ≥ 20 km apart.
+export function scoreDayCoherence(places: Place[]): number {
+  if (places.length < 2) return 100;
+  let totalDist = 0;
+  let pairs = 0;
+  for (let i = 0; i < places.length - 1; i++) {
+    for (let j = i + 1; j < places.length; j++) {
+      totalDist += distanceKm(places[i], places[j]);
+      pairs++;
+    }
+  }
+  const meanDist = totalDist / pairs;
+  const REF_KM = 20;
+  return Math.max(0, Math.round(100 * (1 - meanDist / REF_KM)));
+}
+
 // ─── Core generator ──────────────────────────────────────────────────────────
 
 export function generateItinerary(
@@ -49,7 +156,7 @@ export function generateItinerary(
   const maxIdx = BUDGET_ORDER.indexOf(budget);
   const affordable = BUDGET_ORDER.slice(0, maxIdx + 1);
 
-  // Filter by budget and tags, then sort by popularity descending
+  // Filter by budget and tags; sort by popularity descending
   const candidates = allPlaces
     .filter((p) => affordable.includes(p.cost))
     .filter(
@@ -59,39 +166,61 @@ export function generateItinerary(
     )
     .sort((a, b) => b.popularity - a.popularity);
 
-  // Greedy time-based fill: consume candidates in order, rolling over to the
-  // next day whenever adding a place (plus a 30-min travel buffer) would
-  // exceed MAX_DAY_MINUTES.  The first place in each day always gets added
-  // regardless of duration so no place is ever silently skipped.
+  const areaGroups = buildAreaGroups(candidates);
+  const remaining = new Map<string, Place>(candidates.map((p) => [p.id, p]));
+  const usedAnchors = new Set<string>();
   const dayPlans: DayPlan[] = [];
-  let dayIdx = 0;
-  let dayMinutes = 0;
-  let dayPlaceIds: string[] = [];
 
-  for (const place of candidates) {
-    if (dayIdx >= days) break;
+  for (let dayIdx = 0; dayIdx < days; dayIdx++) {
+    const dayPlaceIds: string[] = [];
 
-    const travel = dayPlaceIds.length === 0 ? 0 : TRAVEL_BUFFER_MINS;
-    const cost = travel + place.durationMins;
+    // Anchor = highest-score group not yet used that still has remaining places.
+    // Fallback: any group with remaining places (handles trips longer than unique areas).
+    const anchor =
+      areaGroups.find(
+        (g) => !usedAnchors.has(g.area) && g.places.some((p) => remaining.has(p.id))
+      ) ??
+      areaGroups.find((g) => g.places.some((p) => remaining.has(p.id)));
 
-    if (dayPlaceIds.length === 0 || dayMinutes + cost <= MAX_DAY_MINUTES) {
-      dayPlaceIds.push(place.id);
-      dayMinutes += cost;
-    } else {
-      // Current day is full — close it and retry this place on the next day
-      dayPlans.push({ day: dayIdx + 1, placeIds: dayPlaceIds });
-      dayIdx++;
-      if (dayIdx >= days) break;
-
-      dayPlaceIds = [place.id];
-      dayMinutes = place.durationMins;
+    if (!anchor) {
+      // Pool exhausted — push empty day and continue
+      dayPlans.push({ day: dayIdx + 1, placeIds: [] });
+      continue;
     }
-  }
 
-  // Close the last in-progress day
-  if (dayIdx < days && dayPlaceIds.length > 0) {
+    usedAnchors.add(anchor.area);
+
+    // Phase 1: fill from the anchor area
+    let dayMinutes = greedyFill(anchor.places, dayPlaceIds, 0, remaining);
+
+    // Phase 2: fill from nearby areas (≤ NEARBY_AREA_KM), closest first
+    const nearbyGroups = areaGroups
+      .filter(
+        (g) =>
+          g.area !== anchor.area &&
+          g.places.some((p) => remaining.has(p.id)) &&
+          distanceKm(anchor.centroid, g.centroid) <= NEARBY_AREA_KM
+      )
+      .sort(
+        (a, b) =>
+          distanceKm(anchor.centroid, a.centroid) -
+          distanceKm(anchor.centroid, b.centroid)
+      );
+
+    for (const group of nearbyGroups) {
+      dayMinutes = greedyFill(group.places, dayPlaceIds, dayMinutes, remaining);
+    }
+
+    // Phase 3: fallback — fill remaining capacity with any popular remaining place
+    // (handles tag-filtered datasets with few, dispersed places)
+    if (dayMinutes < MAX_DAY_MINUTES && remaining.size > 0) {
+      const fallbackCandidates = [...remaining.values()].sort(
+        (a, b) => b.popularity - a.popularity
+      );
+      greedyFill(fallbackCandidates, dayPlaceIds, dayMinutes, remaining);
+    }
+
     dayPlans.push({ day: dayIdx + 1, placeIds: dayPlaceIds });
-    dayIdx++;
   }
 
   // Pad any remaining days with empty plans (edge case: few places, many days)

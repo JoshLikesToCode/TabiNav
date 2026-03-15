@@ -11,6 +11,7 @@ interface SortablePlaceCardProps {
   index: number;
   startTime?: string;
   endTime?: string;
+  onPlaceClick: (place: Place, startTime?: string, endTime?: string) => void;
 }
 
 export function SortablePlaceCard({
@@ -18,6 +19,7 @@ export function SortablePlaceCard({
   index,
   startTime,
   endTime,
+  onPlaceClick,
 }: SortablePlaceCardProps) {
   const {
     attributes,
@@ -49,7 +51,11 @@ export function SortablePlaceCard({
         <GripVertical className="h-4 w-4" />
       </button>
 
-      <div className="min-w-0 flex-1">
+      {/* Card body — tap/click opens detail sheet */}
+      <div
+        className="min-w-0 flex-1 cursor-pointer select-none"
+        onClick={() => !isDragging && onPlaceClick(place, startTime, endTime)}
+      >
         <PlaceCard
           place={place}
           index={index}

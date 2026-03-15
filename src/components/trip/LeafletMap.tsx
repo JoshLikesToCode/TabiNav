@@ -15,8 +15,9 @@ export type MapLanguage = "en" | "jp";
 // ─── Tile configuration ───────────────────────────────────────────────────────
 
 const TILE_CONFIGS: Record<MapLanguage, { url: string; attribution: string }> = {
-  // OSM Japan osm-bright style uses name:en as its primary label field,
-  // rendering romanised/English names for Japanese places.
+  // Intent: English-readable labels for Japanese destinations.
+  // Uses the OSM Japan osm-bright style, which targets the name:en field
+  // for most major POIs.  Coverage varies by location and zoom level.
   // No subdomain rotation — single host.
   en: {
     url: "https://tile.openstreetmap.jp/styles/osm-bright/512/{z}/{x}/{y}.png",
@@ -155,5 +156,5 @@ export default function LeafletMap({ places, mapLanguage, city }: LeafletMapProp
     map.fitBounds(bounds, { padding: [48, 48], maxZoom: 15 });
   }, [places]);
 
-  return <div ref={containerRef} className="h-full w-full" />;
+  return <div ref={containerRef} className="h-full w-full isolate" />;
 }

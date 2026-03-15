@@ -30,6 +30,7 @@ const INTERESTS: { id: InterestTag; label: string; emoji: string }[] = [
   { id: "history", label: "History", emoji: "📜" },
   { id: "anime", label: "Anime", emoji: "🎌" },
   { id: "architecture", label: "Architecture", emoji: "🏗️" },
+  { id: "entertainment", label: "Entertainment", emoji: "🎪" },
 ];
 
 const BUDGETS: BudgetLevel[] = ["$", "$$", "$$$"];

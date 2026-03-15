@@ -25,6 +25,7 @@ const TAG_COLORS: Record<InterestTag, string> = {
   history: "bg-stone-100 text-stone-700",
   anime: "bg-sky-50 text-sky-700",
   architecture: "bg-teal-50 text-teal-700",
+  entertainment: "bg-rose-50 text-rose-700",
 };
 
 interface PlaceCardProps {

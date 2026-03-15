@@ -1,20 +1,38 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import Link from "next/link";
 import Image from "next/image";
 import { ArrowLeft, MapPin, Calendar, Wallet } from "lucide-react";
 import { DndContext, DragOverlay, useDroppable } from "@dnd-kit/core";
 import { encodeTripToHash } from "@/lib/hash";
 import { getPlaceById } from "@/lib/itinerary";
-import type { Place } from "@/lib/types";
+import type { Place, Trip, City } from "@/lib/types";
 import { BUDGET_LABELS } from "@/lib/utils";
 import { useTripLoader } from "@/hooks/useTripLoader";
 import { useDragHandlers, DAY_TAB_PREFIX } from "@/hooks/useDragHandlers";
 import { DayColumn } from "./DayColumn";
 import { MapPanel } from "./MapPanel";
 import { PlaceCard } from "./PlaceCard";
+import { PlaceDetailSheet } from "./PlaceDetailSheet";
 import { ShareButton } from "./ShareButton";
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+/** Resolves the ordered Place objects for a given day number. */
+function resolveDayPlaces(trip: Trip, day: number): Place[] {
+  return (trip.dayPlans.find((d) => d.day === day)?.placeIds ?? [])
+    .map((id) => getPlaceById(trip.city, id))
+    .filter((p): p is Place => !!p);
+}
+
+// Tag suggestions shown when a city+filter combination produces zero places.
+// Listed in descending coverage order for each city.
+const CITY_TAG_SUGGESTIONS: Record<City, string> = {
+  tokyo: "Culture, Food, Shopping, or History",
+  kyoto: "Culture, History, Architecture, or Nature",
+};
 
 // ─── Droppable day tab ────────────────────────────────────────────────────────
 // Extracted as a component so useDroppable can be called per-tab without
@@ -56,6 +74,15 @@ export function TripViewer() {
   const { trip, setTrip, error } = useTripLoader();
   const [activeDay, setActiveDay] = useState(1);
   const [showMobileMap, setShowMobileMap] = useState(false);
+  const [selectedPlaceInfo, setSelectedPlaceInfo] = useState<{
+    place: Place;
+    startTime?: string;
+    endTime?: string;
+  } | null>(null);
+
+  function handlePlaceClick(place: Place, startTime?: string, endTime?: string) {
+    setSelectedPlaceInfo({ place, startTime, endTime });
+  }
 
   // Sync URL hash whenever trip changes so ShareButton always shares current state.
   useEffect(() => {
@@ -113,19 +140,15 @@ export function TripViewer() {
     );
   }
 
-  // ── Resolve places for a given day ──
-  const dayPlaces = (day: number): Place[] =>
-    (trip.dayPlans.find((d) => d.day === day)?.placeIds ?? [])
-      .map((id) => getPlaceById(trip.city, id))
-      .filter((p): p is Place => !!p);
-
-  const activePlaces = dayPlaces(activeDay);
+  const activePlaces = resolveDayPlaces(trip, activeDay);
+  const hasNoResults = trip.dayPlans.every((d) => d.placeIds.length === 0);
   const cityLabel = trip.city.charAt(0).toUpperCase() + trip.city.slice(1);
   const activeDragPlace = activeDragId
     ? getPlaceById(trip.city, activeDragId)
     : null;
 
   return (
+    <>
     <DndContext
       sensors={sensors}
       collisionDetection={collisionDetection}
@@ -193,12 +216,34 @@ export function TripViewer() {
 
             {/* Place list */}
             <div className="flex-1 overflow-y-auto p-4 scrollbar-thin">
-              {activeDragId && (
-                <p className="mb-2 text-center text-[10px] text-muted-foreground/50">
-                  Drop on a day tab to move between days
-                </p>
+              {hasNoResults ? (
+                /* Shown when the tag+budget combination matched zero places. */
+                <div className="flex flex-col items-center justify-center py-16 text-center">
+                  <p className="mb-2 text-3xl">🔍</p>
+                  <p className="mb-1 text-sm font-semibold text-foreground">
+                    No places match your filters
+                  </p>
+                  <p className="mb-5 max-w-[220px] text-xs text-muted-foreground">
+                    Try {CITY_TAG_SUGGESTIONS[trip.city]} for the best{" "}
+                    {trip.city.charAt(0).toUpperCase() + trip.city.slice(1)} results.
+                  </p>
+                  <Link
+                    href="/build"
+                    className="rounded-lg bg-primary px-4 py-2 text-xs font-semibold text-primary-foreground hover:bg-primary/90"
+                  >
+                    Edit trip
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  {activeDragId && (
+                    <p className="mb-2 text-center text-[10px] text-muted-foreground/50">
+                      Drop on a day tab to move between days
+                    </p>
+                  )}
+                  <DayColumn places={activePlaces} onPlaceClick={handlePlaceClick} />
+                </>
               )}
-              <DayColumn places={activePlaces} />
             </div>
           </aside>
 
@@ -243,5 +288,19 @@ export function TripViewer() {
         ) : null}
       </DragOverlay>
     </DndContext>
+
+    {/* Detail sheet — rendered outside DndContext so dnd-kit's event handling
+        cannot interfere. Portal escapes any stacking context within the app. */}
+    {selectedPlaceInfo &&
+      createPortal(
+        <PlaceDetailSheet
+          place={selectedPlaceInfo.place}
+          startTime={selectedPlaceInfo.startTime}
+          endTime={selectedPlaceInfo.endTime}
+          onClose={() => setSelectedPlaceInfo(null)}
+        />,
+        document.body
+      )}
+    </>
   );
 }

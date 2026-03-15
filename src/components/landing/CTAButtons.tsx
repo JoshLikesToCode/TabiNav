@@ -20,7 +20,7 @@ export function CTABanner() {
 
       <div className="relative mx-auto max-w-3xl px-4 text-center sm:px-6">
         <h2 className="mb-4 text-3xl font-bold tracking-tight sm:text-4xl">
-          Ready to plan your Tokyo adventure?
+          Ready to plan your Japan adventure?
         </h2>
         <p className="mb-8 text-lg text-primary-foreground/75">
           It only takes a minute. No sign-up, no credit card, no hassle.

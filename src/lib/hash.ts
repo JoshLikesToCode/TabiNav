@@ -14,7 +14,7 @@ const VALID_CITIES = new Set<string>(["tokyo", "kyoto"]);
 const VALID_BUDGETS = new Set<string>(["$", "$$", "$$$"]);
 const VALID_TAGS = new Set<string>([
   "culture", "food", "nature", "shopping",
-  "nightlife", "art", "history", "anime", "architecture",
+  "nightlife", "art", "history", "anime", "architecture", "entertainment",
 ]);
 
 /** Compact wire format stored in the URL hash. */
@@ -52,27 +52,42 @@ function fromBase64Url(encoded: string): string {
   return new TextDecoder().decode(bytes);
 }
 
+// ─── Type guards ──────────────────────────────────────────────────────────────
+// Each guard narrows an unknown value to the corresponding union type by
+// checking it against the runtime validation sets above.  Using guards instead
+// of bare `as` casts means TypeScript carries the narrowed type through to the
+// return site, making the cast provably safe.
+
+function isCity(v: unknown): v is City {
+  return typeof v === "string" && VALID_CITIES.has(v);
+}
+
+function isBudgetLevel(v: unknown): v is BudgetLevel {
+  return typeof v === "string" && VALID_BUDGETS.has(v);
+}
+
+function isInterestTag(v: unknown): v is InterestTag {
+  return typeof v === "string" && VALID_TAGS.has(v);
+}
+
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 /**
  * Validates an unknown JSON value against the HashPayload schema and domain
  * constraints, then constructs a trusted Trip.  Returns null on any violation.
  *
- * All `as` narrowing assertions below are safe: each field is checked before
- * it is cast.  This is the single boundary where untrusted data enters the
- * type system.
+ * Enum fields use the type guards above so the return statement carries
+ * narrowed types without unsafe casts.  This is the single boundary where
+ * untrusted data enters the type system.
  */
 function validatePayload(raw: unknown): Trip | null {
   if (typeof raw !== "object" || raw === null) return null;
   const p = raw as Record<string, unknown>;
 
   if (p.v !== 1) return null;
-  if (typeof p.c !== "string" || !VALID_CITIES.has(p.c)) return null;
-  if (typeof p.b !== "string" || !VALID_BUDGETS.has(p.b)) return null;
-  if (
-    !Array.isArray(p.t) ||
-    p.t.some((t) => typeof t !== "string" || !VALID_TAGS.has(t))
-  ) return null;
+  if (!isCity(p.c)) return null;
+  if (!isBudgetLevel(p.b)) return null;
+  if (!Array.isArray(p.t) || !p.t.every(isInterestTag)) return null;
   if (
     typeof p.d !== "number" ||
     !Number.isInteger(p.d) ||
@@ -87,10 +102,10 @@ function validatePayload(raw: unknown): Trip | null {
 
   return {
     v: 1,
-    city: p.c as City,
-    days: p.d,
-    budget: p.b as BudgetLevel,
-    selectedTags: p.t as InterestTag[],
+    city: p.c,           // City — narrowed by isCity
+    days: p.d as number, // number — typeof check above; Record<string,unknown> index yields unknown
+    budget: p.b,         // BudgetLevel — narrowed by isBudgetLevel
+    selectedTags: p.t,   // InterestTag[] — narrowed by every(isInterestTag)
     dayPlans: (p.i as string[][]).map((placeIds, idx) => ({
       day: idx + 1,
       placeIds,

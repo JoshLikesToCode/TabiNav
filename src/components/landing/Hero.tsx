@@ -25,7 +25,7 @@ export function Hero() {
             {/* Eyebrow */}
             <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-primary/20 bg-primary/5 px-4 py-1.5 text-sm font-medium text-primary">
               <Sparkles className="h-3.5 w-3.5" />
-              Tokyo itineraries — instant &amp; free
+              Tokyo &amp; Kyoto — instant &amp; free
             </div>
 
             {/* Headline */}
@@ -38,8 +38,8 @@ export function Hero() {
             {/* Sub-copy */}
             <p className="mb-8 text-lg leading-relaxed text-muted-foreground sm:text-xl">
               Tell us your style — culture, food, nightlife — and get a
-              personalized day-by-day Tokyo itinerary you can share with a
-              single link.
+              personalized day-by-day itinerary for Tokyo or Kyoto you can
+              share with a single link.
             </p>
 
             {/* CTAs */}

@@ -325,6 +325,36 @@ Provide a **Fix Pass** section if issues are found.
 
 ---
 
+### Incident #011 — `"entertainment"` used as a place tag but missing from `InterestTag` union
+
+**Issue:** Six entries in `places.tokyo.v1.json` and one in `places.kyoto.v1.json` used `"entertainment"` as a tag. `loadPlaces()` validates every tag against `VALID_PLACE_TAGS` using `.every()` — a single invalid tag causes the entire entry to be silently dropped. All seven places were being excluded from itinerary generation.
+**Root cause:** `"entertainment"` is a valid `PlaceCategory` value but was never added to the `InterestTag` union. The dataset author used category names as tags, which is plausible but requires keeping both sets in sync.
+**Fix:** Added `"entertainment"` to `InterestTag` in `types.ts`, to `VALID_TAGS` in `hash.ts`, to `VALID_PLACE_TAGS` in `itinerary.ts`, to `TAG_COLORS` in `PlaceCard.tsx` (`bg-rose-50 text-rose-700`), and to the `INTERESTS` array in `TripWizard.tsx`.
+**Lesson:** Dataset tags must be validated against the type system at write time, not just at load time. Silent drops in `loadPlaces()` are intentional for malformed data but should never be caused by valid semantic categories missing from the type.
+**Preventive guideline:** When adding a new tag value to any dataset entry, first check it exists in `InterestTag`. If it doesn't, add it to all five locations: `types.ts`, `hash.ts`, `itinerary.ts`, `PlaceCard.tsx` (`TAG_COLORS`), `TripWizard.tsx` (`INTERESTS`).
+
+---
+
+### Incident #012 — `createPortal` inside a dnd-kit sortable caused sheet to never open
+
+**Issue:** `PlaceDetailSheet` was rendered via `createPortal(…, document.body)` from inside `SortablePlaceCard`. Clicking place cards did nothing — the sheet never appeared. The Leaflet map received the click instead (user saw "the map area highlights").
+**Root cause:** `createPortal` escapes the DOM tree for *rendering* but does NOT escape the React fiber/event tree. `SortablePlaceCard` is a descendant of `DndContext` in the React tree. dnd-kit processes pointer events for its managed draggables through that same fiber subtree. The click event was consumed within the dnd-kit tree before React could commit the portal to the DOM; the raw DOM click then fell through to the Leaflet map underneath.
+**Fix:** Lifted `selectedPlaceInfo` state to `TripViewer`. Threaded an `onPlaceClick` callback down through `DayColumn` → `SortablePlaceCard`. Portal rendered once in `TripViewer`, as a sibling of `DndContext` (outside it entirely), so dnd-kit's event handling has no path to the sheet.
+**Lesson:** A portal rendered from inside `DndContext` is still a React child of dnd-kit's context and subject to its synthetic event processing. `createPortal` only moves DOM placement — it does not move the component out of its React ancestor's event scope.
+**Preventive guideline:** Never render `createPortal` from inside a dnd-kit sortable or draggable component. Lift modal/sheet/drawer state to a common ancestor that is a sibling of (or above) `DndContext`, and render the portal from there.
+
+---
+
+### Incident #013 — Leaflet z-index panes escaped their stacking context and covered the detail sheet
+
+**Issue:** The `PlaceDetailSheet` portal rendered briefly, then the Leaflet map immediately covered it. The sheet was behind the map.
+**Root cause:** Leaflet's `.leaflet-top` / `.leaflet-bottom` panes are `position: absolute; z-index: 1000`. The Leaflet container div has `position: relative` (set by Leaflet's JS) but **no explicit `z-index`**, so it has `z-index: auto` and does NOT create a stacking context. Without a stacking context, Leaflet's children escape into the root stacking context and their z-index 1000 is compared directly against the sheet portal's `z-50` (= 50). 1000 > 50 — map wins.
+**Fix:** Added `isolate` (`isolation: isolate`) to the Leaflet container div in `LeafletMap.tsx`. This forces the container to create its own stacking context, trapping all Leaflet panes inside it. The container itself has no explicit z-index (auto = 0 in the root), so the portal at z-50 is now above the entire map.
+**Lesson:** A `position: relative` element with no z-index does NOT create a stacking context — its absolutely-positioned children with explicit z-indexes participate in the parent stacking context, not a local one. Any library (like Leaflet) that uses high internal z-indexes must be wrapped in a stacking context to prevent bleeding into the page.
+**Preventive guideline:** Wrap any third-party component that uses high internal z-indexes (Leaflet, charting libs, video players) in `isolation: isolate` (`isolate` in Tailwind). Never assume a container with `position: relative` contains its children's z-indexes — it only does if it also has a non-auto z-index (or other stacking-context-forming properties like `isolate`, `transform`, `filter`).
+
+---
+
 > Whenever Claude makes a structural mistake, breaks a build, introduces invalid imports, creates broken logic, causes a deployment failure, or suggests over-engineered solutions, it **must**:
 > 1. Acknowledge the mistake clearly.
 > 2. Explain why it happened.

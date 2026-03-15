@@ -13,7 +13,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://tabinav.com"),
   title: "TabiNav — Japan Trip Planner",
   description:
-    "Plan your perfect Tokyo itinerary in minutes. Share with anyone via a single link — no account needed.",
+    "Plan your perfect Japan itinerary in minutes. Tokyo and Kyoto supported. Share with anyone via a single link — no account needed.",
   icons: {
     icon: "/images/tabinav-logo.png",
     apple: "/images/tabinav-logo.png",

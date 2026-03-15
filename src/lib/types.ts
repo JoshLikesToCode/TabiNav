@@ -13,7 +13,8 @@ export type InterestTag =
   | "art"
   | "history"
   | "anime"
-  | "architecture";
+  | "architecture"
+  | "entertainment";
 
 export type PlaceCategory =
   | "temple"

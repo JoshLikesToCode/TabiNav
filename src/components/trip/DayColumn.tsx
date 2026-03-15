@@ -8,12 +8,13 @@ import { SortablePlaceCard } from "./SortablePlaceCard";
 
 interface DayColumnProps {
   places: Place[];
+  onPlaceClick: (place: Place, startTime?: string, endTime?: string) => void;
 }
 
 // 30-minute travel buffer between stops, matching itinerary generator + buildDaySchedule
 const TRAVEL_BUFFER_MINS = 30;
 
-export function DayColumn({ places }: DayColumnProps) {
+export function DayColumn({ places, onPlaceClick }: DayColumnProps) {
   const schedule = buildDaySchedule(places.map((p) => p.durationMins));
 
   const totalMins =
@@ -42,6 +43,7 @@ export function DayColumn({ places }: DayColumnProps) {
             index={idx}
             startTime={schedule[idx]?.startTime}
             endTime={schedule[idx]?.endTime}
+            onPlaceClick={onPlaceClick}
           />
         ))}
 
