@@ -553,5 +553,50 @@
     "area": "Fushimi",
     "lat": 34.9366,
     "lng": 135.7502
+  },
+  {
+    "id": "daimonjiyama",
+    "name": "Mount Daimonji",
+    "nameJa": "大文字山",
+    "city": "kyoto",
+    "category": "park",
+    "tags": ["nature", "culture", "history"],
+    "cost": "$",
+    "durationMins": 150,
+    "popularity": 65,
+    "description": "The wooded peak east of Ginkaku-ji, famous for the Gozan Okuribi fire festival each August — a giant 大 (dai) character blazes on its face to guide ancestral spirits home. Outside festival season, the trail to the 466m summit offers sweeping panoramic views across Kyoto's rooftops and into the mountains beyond.",
+    "area": "Sakyo",
+    "lat": 35.0294,
+    "lng": 135.8019
+  },
+  {
+    "id": "kyoto-trail",
+    "name": "Kyoto Trail",
+    "nameJa": "京都一周トレイル",
+    "city": "kyoto",
+    "category": "park",
+    "tags": ["nature", "culture", "history"],
+    "cost": "$",
+    "durationMins": 240,
+    "popularity": 58,
+    "description": "An 85km long-distance trail that circles the mountains surrounding Kyoto, passing through Fushimi, Higashiyama, Kurama, and Arashiyama. Most visitors tackle one section — the Higashiyama Course from Fushimi Inari north to Nanzen-ji is the most scenic half-day route, passing Kiyomizudera and Kodai-ji on the way.",
+    "area": "Higashiyama",
+    "lat": 35.0200,
+    "lng": 135.7962
+  },
+  {
+    "id": "kongo-noh-theatre",
+    "name": "Kongo Noh Theatre",
+    "nameJa": "金剛能楽堂",
+    "city": "kyoto",
+    "category": "entertainment",
+    "tags": ["culture", "history", "art"],
+    "cost": "$$",
+    "durationMins": 150,
+    "popularity": 40,
+    "description": "Headquarters of the Kongo school of Noh — one of Japan's five major schools — with a lineage stretching over 700 years. Located near the Imperial Palace in Kamigyo, the theatre hosts monthly subscription performances (定期能) open to the public, along with special seasonal programmes.",
+    "area": "Kamigyo",
+    "lat": 35.0247,
+    "lng": 135.7595
   }
 ]

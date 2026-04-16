@@ -18,12 +18,55 @@ const VALID_PLACE_TAGS = new Set<string>([
 ]);
 const VALID_PLACE_COSTS = new Set<string>(["$", "$$", "$$$"]);
 
+// ─── Dev-mode diagnostic ──────────────────────────────────────────────────────
+// Identifies the first failing validation field in a dropped entry.
+// Mirrors the validation predicate in loadPlaces — keep both in sync when
+// adding new required fields.  Never called in production.
+
+function warnDropped(p: Record<string, unknown>): void {
+  const id = typeof p.id === "string" && p.id ? p.id : "(no id)";
+  let reason = "unknown field";
+
+  if (typeof p.id !== "string" || !p.id) {
+    reason = "id missing or empty";
+  } else if (typeof p.name !== "string" || !p.name) {
+    reason = "name missing or empty";
+  } else if (typeof p.nameJa !== "string") {
+    reason = "nameJa not a string";
+  } else if (typeof p.city !== "string" || !VALID_PLACE_CITIES.has(p.city)) {
+    reason = `city "${p.city}" not in [${[...VALID_PLACE_CITIES].join(", ")}]`;
+  } else if (typeof p.category !== "string" || !VALID_PLACE_CATEGORIES.has(p.category)) {
+    reason = `category "${p.category}" not recognized`;
+  } else if (!Array.isArray(p.tags)) {
+    reason = "tags must be an array";
+  } else if ((p.tags as unknown[]).some((t) => typeof t !== "string" || !VALID_PLACE_TAGS.has(t as string))) {
+    const bad = (p.tags as unknown[]).find((t) => typeof t !== "string" || !VALID_PLACE_TAGS.has(t as string));
+    reason = `unknown tag "${bad}"`;
+  } else if (typeof p.cost !== "string" || !VALID_PLACE_COSTS.has(p.cost)) {
+    reason = `cost "${p.cost}" — expected $, $$, or $$$`;
+  } else if (typeof p.durationMins !== "number" || p.durationMins <= 0) {
+    reason = `durationMins "${p.durationMins}" must be a positive number`;
+  } else if (typeof p.popularity !== "number" || p.popularity < 0 || p.popularity > 100) {
+    reason = `popularity "${p.popularity}" must be 0–100`;
+  } else if (typeof p.description !== "string" || !p.description) {
+    reason = "description missing or empty";
+  } else if (typeof p.area !== "string" || !p.area) {
+    reason = "area missing or empty";
+  } else if (typeof p.lat !== "number") {
+    reason = `lat is not a number (got ${typeof p.lat})`;
+  } else if (typeof p.lng !== "number") {
+    reason = `lng is not a number (got ${typeof p.lng})`;
+  }
+
+  console.warn(`[TabiNav] loadPlaces: dropped "${id}" — ${reason}`);
+}
+
 function loadPlaces(data: unknown): Place[] {
   if (!Array.isArray(data)) return [];
   return data.filter((item): item is Place => {
     if (typeof item !== "object" || item === null) return false;
     const p = item as Record<string, unknown>;
-    return (
+    const ok = (
       typeof p.id === "string" && p.id.length > 0 &&
       typeof p.name === "string" && p.name.length > 0 &&
       typeof p.nameJa === "string" &&
@@ -39,6 +82,10 @@ function loadPlaces(data: unknown): Place[] {
       typeof p.lat === "number" &&
       typeof p.lng === "number"
     );
+    if (!ok && process.env.NODE_ENV !== "production") {
+      warnDropped(p);
+    }
+    return ok;
   });
 }
 

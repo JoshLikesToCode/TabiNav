@@ -35,6 +35,33 @@
 
 ---
 
+## Osaka — Planned Places (add when city is enabled)
+
+The following places are queued for `places.osaka.v1.json` once Osaka is added as a supported `City`. Enable the city by: adding `"osaka"` to `City` in `types.ts`, `VALID_CITIES` in `hash.ts`, `VALID_PLACE_CITIES` and `CITY_PLACES` in `itinerary.ts`, `CITY_CENTERS` in `LeafletMap.tsx`, moving Osaka from `CITIES_SOON` to `CITIES` in `TripWizard.tsx`, and adding an entry to `CITY_TAG_SUGGESTIONS` in `TripViewer.tsx`.
+
+| id | Name | Area | Category | Tags | Cost | Duration | Popularity |
+|---|---|---|---|---|---|---|---|
+| `osaka-castle` | Osaka Castle | Chuo | landmark | history, culture, architecture | $ | 120 | 90 |
+| `dotonbori` | Dotonbori & Glico Sign | Namba | district | food, nightlife, entertainment | $ | 120 | 95 |
+| `namba` | Namba District | Namba | district | shopping, food, entertainment | $ | 120 | 85 |
+| `kuromon-market` | Kuromon Ichiba Market | Chuo | food | food, culture | $ | 90 | 78 |
+| `shinsekai` | Shinsekai | Naniwa | district | food, history, culture | $ | 90 | 72 |
+| `shitennoji` | Shitennoji Temple | Tennoji | temple | history, culture | $ | 90 | 68 |
+| `umeda-sky-building` | Umeda Sky Building | Kita | landmark | architecture | $$ | 90 | 80 |
+| `sumiyoshi-taisha` | Sumiyoshi Grand Shrine | Sumiyoshi | shrine | culture, history, architecture | $ | 60 | 65 |
+| `kaiyukan` | Osaka Aquarium Kaiyukan | Minato | entertainment | nature | $$ | 150 | 82 |
+| `edion-arena-osaka` | EDION Arena Osaka (sumo) | Namba | entertainment | culture, history | $$ | 120 | 55 |
+| `america-mura` | Amerika Mura | Chuo | district | shopping, art, culture | $ | 90 | 62 |
+| `harukas300` | Abeno Harukas 300 | Abeno | landmark | architecture | $$ | 60 | 75 |
+
+**Notes:**
+- Dotonbori description should prominently feature the Glico Running Man sign and the neon-lit canal.
+- EDION Arena Osaka (大阪府立体育会館) hosts the Haru Basho (spring sumo tournament) each March.
+- Don Quijote Dotonbori (with the iconic rooftop Ferris wheel) can be folded into the Dotonbori entry or given its own `donki-dotonbori` shopping entry.
+- Osaka Castle city center: lat `34.6937`, lng `135.5023`.
+
+---
+
 ## Tech Stack
 
 | Layer | Technology |

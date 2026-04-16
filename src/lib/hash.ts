@@ -70,6 +70,23 @@ function isInterestTag(v: unknown): v is InterestTag {
   return typeof v === "string" && VALID_TAGS.has(v);
 }
 
+function isValidDayCount(v: unknown): v is number {
+  return typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 30;
+}
+
+// Checks that v is an array of string arrays — the shape of the `i` field in the
+// hash payload.  Using a type guard here eliminates the `as string[][]` cast at
+// the return site and makes the narrowing visible to TypeScript's control flow.
+function isStringMatrix(v: unknown): v is string[][] {
+  return (
+    Array.isArray(v) &&
+    v.every(
+      (row): row is string[] =>
+        Array.isArray(row) && row.every((cell) => typeof cell === "string")
+    )
+  );
+}
+
 // ─── Validation ───────────────────────────────────────────────────────────────
 
 /**
@@ -88,25 +105,17 @@ function validatePayload(raw: unknown): Trip | null {
   if (!isCity(p.c)) return null;
   if (!isBudgetLevel(p.b)) return null;
   if (!Array.isArray(p.t) || !p.t.every(isInterestTag)) return null;
-  if (
-    typeof p.d !== "number" ||
-    !Number.isInteger(p.d) ||
-    p.d < 1 ||
-    p.d > 30
-  ) return null;
-  if (
-    !Array.isArray(p.i) ||
-    p.i.some((day) => !Array.isArray(day) || day.some((id) => typeof id !== "string"))
-  ) return null;
+  if (!isValidDayCount(p.d)) return null;
+  if (!isStringMatrix(p.i)) return null;
   if (p.i.length !== p.d) return null;
 
   return {
     v: 1,
-    city: p.c,           // City — narrowed by isCity
-    days: p.d as number, // number — typeof check above; Record<string,unknown> index yields unknown
-    budget: p.b,         // BudgetLevel — narrowed by isBudgetLevel
-    selectedTags: p.t,   // InterestTag[] — narrowed by every(isInterestTag)
-    dayPlans: (p.i as string[][]).map((placeIds, idx) => ({
+    city: p.c,         // narrowed by isCity
+    days: p.d,         // narrowed by isValidDayCount
+    budget: p.b,       // narrowed by isBudgetLevel
+    selectedTags: p.t, // narrowed by every(isInterestTag)
+    dayPlans: p.i.map((placeIds, idx) => ({
       day: idx + 1,
       placeIds,
     })),

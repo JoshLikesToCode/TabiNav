@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
-import Image from "next/image";
-import { ArrowLeft, MapPin, Calendar, Wallet } from "lucide-react";
 import { DndContext, DragOverlay, useDroppable } from "@dnd-kit/core";
 import { encodeTripToHash } from "@/lib/hash";
 import { getPlaceById } from "@/lib/itinerary";
@@ -16,7 +14,7 @@ import { DayColumn } from "./DayColumn";
 import { MapPanel } from "./MapPanel";
 import { PlaceCard } from "./PlaceCard";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
-import { ShareButton } from "./ShareButton";
+import { TripHeader } from "./TripHeader";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -143,6 +141,17 @@ export function TripViewer() {
   const activePlaces = resolveDayPlaces(trip, activeDay);
   const hasNoResults = trip.dayPlans.every((d) => d.placeIds.length === 0);
   const cityLabel = trip.city.charAt(0).toUpperCase() + trip.city.slice(1);
+  const activeFilterSummary = [
+    cityLabel,
+    trip.selectedTags.length > 0
+      ? trip.selectedTags
+          .map((t) => t.charAt(0).toUpperCase() + t.slice(1))
+          .join(", ")
+      : null,
+    BUDGET_LABELS[trip.budget],
+  ]
+    .filter(Boolean)
+    .join(" · ");
   const activeDragPlace = activeDragId
     ? getPlaceById(trip.city, activeDragId)
     : null;
@@ -158,44 +167,7 @@ export function TripViewer() {
       onDragCancel={handleDragCancel}
     >
       <div className="flex h-screen flex-col overflow-hidden bg-background">
-        {/* ── Top bar ── */}
-        <header className="z-10 flex items-center justify-between border-b border-border bg-card px-4 py-3 shadow-sm sm:px-6">
-          <div className="flex items-center gap-3">
-            <Link
-              href="/build"
-              className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span className="hidden sm:inline">Edit trip</span>
-            </Link>
-            <span className="text-muted-foreground/40">|</span>
-            <Image
-              src="/images/tabinav-logo.png"
-              alt="TabiNav"
-              height={80}
-              width={120}
-              className="h-20 w-auto"
-            />
-          </div>
-
-          {/* Trip meta */}
-          <div className="hidden items-center gap-4 text-xs text-muted-foreground sm:flex">
-            <span className="flex items-center gap-1">
-              <MapPin className="h-3 w-3" />
-              {cityLabel}
-            </span>
-            <span className="flex items-center gap-1">
-              <Calendar className="h-3 w-3" />
-              {trip.days} day{trip.days !== 1 ? "s" : ""}
-            </span>
-            <span className="flex items-center gap-1">
-              <Wallet className="h-3 w-3" />
-              {BUDGET_LABELS[trip.budget]}
-            </span>
-          </div>
-
-          <ShareButton />
-        </header>
+        <TripHeader trip={trip} />
 
         {/* ── Main layout ── */}
         <div className="flex flex-1 overflow-hidden">
@@ -223,9 +195,12 @@ export function TripViewer() {
                   <p className="mb-1 text-sm font-semibold text-foreground">
                     No places match your filters
                   </p>
+                  <p className="mb-1 text-xs text-muted-foreground/60">
+                    {activeFilterSummary}
+                  </p>
                   <p className="mb-5 max-w-[220px] text-xs text-muted-foreground">
                     Try {CITY_TAG_SUGGESTIONS[trip.city]} for the best{" "}
-                    {trip.city.charAt(0).toUpperCase() + trip.city.slice(1)} results.
+                    {cityLabel} results.
                   </p>
                   <Link
                     href="/build"
