@@ -8,6 +8,7 @@ import { encodeTripToHash } from "@/lib/hash";
 import { getPlaceById } from "@/lib/itinerary";
 import type { Place, Trip, City } from "@/lib/types";
 import { BUDGET_LABELS } from "@/lib/utils";
+import { analyzeTripPlaces } from "@/lib/intelligence";
 import { useTripLoader } from "@/hooks/useTripLoader";
 import { useDragHandlers, DAY_TAB_PREFIX } from "@/hooks/useDragHandlers";
 import { DayColumn } from "./DayColumn";
@@ -141,6 +142,8 @@ export function TripViewer() {
   const activePlaces = resolveDayPlaces(trip, activeDay);
   const hasNoResults = trip.dayPlans.every((d) => d.placeIds.length === 0);
   const cityLabel = trip.city.charAt(0).toUpperCase() + trip.city.slice(1);
+  const allDayPlaces = trip.dayPlans.map((d) => resolveDayPlaces(trip, d.day));
+  const tripInsight = analyzeTripPlaces(allDayPlaces);
   const activeFilterSummary = [
     cityLabel,
     trip.selectedTags.length > 0
@@ -173,6 +176,23 @@ export function TripViewer() {
         <div className="flex flex-1 overflow-hidden">
           {/* ── Left: day tabs + place list ── */}
           <aside className="flex w-full flex-col overflow-hidden border-r border-border bg-muted/20 lg:w-[420px] lg:shrink-0">
+            {/* ── Trip intelligence bar ── */}
+            {!hasNoResults && (
+              <div className="flex items-center justify-between border-b border-border px-4 py-2">
+                <p className="min-w-0 truncate text-[11px] text-muted-foreground">
+                  {tripInsight.summaryLines[0]}
+                  {tripInsight.summaryLines[1] && (
+                    <span className="ml-2 text-muted-foreground/50">
+                      · {tripInsight.summaryLines[1]}
+                    </span>
+                  )}
+                </p>
+                <span className="ml-3 shrink-0 rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-semibold text-primary">
+                  {tripInsight.score}
+                </span>
+              </div>
+            )}
+
             {/* Day tabs — each is a droppable drop zone for cross-day moves */}
             <div className="flex gap-1 overflow-x-auto border-b border-border bg-card px-4 py-2 scrollbar-thin">
               {trip.dayPlans.map((d) => (
