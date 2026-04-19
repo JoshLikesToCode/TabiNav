@@ -1,7 +1,7 @@
 "use client";
 
 import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, Wand2 } from "lucide-react";
 import type { Place } from "@/lib/types";
 import { buildDaySchedule, formatDuration } from "@/lib/utils";
 import { analyzeDayPlaces } from "@/lib/intelligence";
@@ -10,12 +10,14 @@ import { SortablePlaceCard } from "./SortablePlaceCard";
 interface DayColumnProps {
   places: Place[];
   onPlaceClick: (place: Place, startTime?: string, endTime?: string) => void;
+  onSwap: (place: Place) => void;
+  onImprove: () => void;
 }
 
 // 30-minute travel buffer between stops, matching itinerary generator + buildDaySchedule
 const TRAVEL_BUFFER_MINS = 30;
 
-export function DayColumn({ places, onPlaceClick }: DayColumnProps) {
+export function DayColumn({ places, onPlaceClick, onSwap, onImprove }: DayColumnProps) {
   const schedule = buildDaySchedule(places.map((p) => p.durationMins));
 
   const totalMins =
@@ -47,6 +49,7 @@ export function DayColumn({ places, onPlaceClick }: DayColumnProps) {
             startTime={schedule[idx]?.startTime}
             endTime={schedule[idx]?.endTime}
             onPlaceClick={onPlaceClick}
+            onSwap={onSwap}
           />
         ))}
 
@@ -58,6 +61,16 @@ export function DayColumn({ places, onPlaceClick }: DayColumnProps) {
             {dayInsight.label}
           </span>
         </div>
+
+        {places.length >= 2 && (
+          <button
+            onClick={onImprove}
+            className="mt-1 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-border py-2 text-xs font-medium text-muted-foreground transition-colors hover:border-primary/40 hover:bg-primary/[0.04] hover:text-primary"
+          >
+            <Wand2 className="h-3.5 w-3.5" />
+            Improve this day
+          </button>
+        )}
       </div>
     </SortableContext>
   );

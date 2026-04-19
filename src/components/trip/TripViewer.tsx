@@ -3,9 +3,11 @@
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import Link from "next/link";
+import { toast } from "sonner";
 import { DndContext, DragOverlay, useDroppable } from "@dnd-kit/core";
 import { encodeTripToHash } from "@/lib/hash";
-import { getPlaceById } from "@/lib/itinerary";
+import { getPlaceById, getAllPlaces } from "@/lib/itinerary";
+import { improveDayPlan, findNearbyAlternatives } from "@/lib/suggestions";
 import type { Place, Trip, City } from "@/lib/types";
 import { BUDGET_LABELS } from "@/lib/utils";
 import { analyzeTripPlaces } from "@/lib/intelligence";
@@ -15,6 +17,7 @@ import { DayColumn } from "./DayColumn";
 import { MapPanel } from "./MapPanel";
 import { PlaceCard } from "./PlaceCard";
 import { PlaceDetailSheet } from "./PlaceDetailSheet";
+import { SwapPanel } from "./SwapPanel";
 import { TripHeader } from "./TripHeader";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -78,9 +81,42 @@ export function TripViewer() {
     startTime?: string;
     endTime?: string;
   } | null>(null);
+  const [swapTarget, setSwapTarget] = useState<Place | null>(null);
 
   function handlePlaceClick(place: Place, startTime?: string, endTime?: string) {
     setSelectedPlaceInfo({ place, startTime, endTime });
+  }
+
+  function handleSwapClick(place: Place) {
+    setSwapTarget(place);
+  }
+
+  function handleSwapSelect(replacement: Place) {
+    if (!trip || !swapTarget) return;
+    const updatedDayPlans = trip.dayPlans.map((d) => ({
+      ...d,
+      placeIds: d.placeIds.map((id) =>
+        id === swapTarget.id ? replacement.id : id
+      ),
+    }));
+    setTrip({ ...trip, dayPlans: updatedDayPlans });
+    setSwapTarget(null);
+    toast.success(`Swapped for ${replacement.name}`, { duration: 2500 });
+  }
+
+  function handleImproveDay() {
+    if (!trip) return;
+    const allPlaces = getAllPlaces(trip.city);
+    const improved = improveDayPlan(activeDay, trip, allPlaces);
+    if (improved === trip) {
+      toast("Day is already well-optimized", { duration: 2000 });
+    } else {
+      setTrip(improved);
+      toast.success("Day optimized", {
+        description: "Reordered stops for better flow.",
+        duration: 2500,
+      });
+    }
   }
 
   // Sync URL hash whenever trip changes so ShareButton always shares current state.
@@ -236,7 +272,12 @@ export function TripViewer() {
                       Drop on a day tab to move between days
                     </p>
                   )}
-                  <DayColumn places={activePlaces} onPlaceClick={handlePlaceClick} />
+                  <DayColumn
+                    places={activePlaces}
+                    onPlaceClick={handlePlaceClick}
+                    onSwap={handleSwapClick}
+                    onImprove={handleImproveDay}
+                  />
                 </>
               )}
             </div>
@@ -293,6 +334,23 @@ export function TripViewer() {
           startTime={selectedPlaceInfo.startTime}
           endTime={selectedPlaceInfo.endTime}
           onClose={() => setSelectedPlaceInfo(null)}
+        />,
+        document.body
+      )}
+
+    {/* Swap panel — outside DndContext for the same reason (Incident #012). */}
+    {swapTarget &&
+      trip &&
+      createPortal(
+        <SwapPanel
+          target={swapTarget}
+          alternatives={findNearbyAlternatives(
+            swapTarget,
+            trip,
+            getAllPlaces(trip.city)
+          )}
+          onSelect={handleSwapSelect}
+          onClose={() => setSwapTarget(null)}
         />,
         document.body
       )}

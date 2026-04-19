@@ -382,6 +382,16 @@ Provide a **Fix Pass** section if issues are found.
 
 ---
 
+### Incident #014 — Vitest JSX transform conflict with Next.js `tsconfig.json`
+
+**Issue:** Integration tests using `.tsx` files failed with: _"Failed to parse source for import analysis because the content contains invalid JS syntax. If you use tsconfig.json, make sure to not set jsx to preserve."_
+**Root cause:** `tsconfig.json` sets `"jsx": "preserve"` — required by Next.js's SWC compiler. Vitest 4 uses `oxc` as its default transformer. Neither oxc nor Vite's `vite:import-analysis` plugin can process raw JSX without an explicit JSX transform step. The first fix attempt (`esbuild.jsx: "automatic"`) was silently ignored because Vitest 4's oxc transformer takes precedence over the `esbuild` config key.
+**Fix:** Installed `@vitejs/plugin-react` as a dev dependency and added `plugins: [react()]` to `vitest.config.ts`. This plugin transforms JSX to standard JS *before* `vite:import-analysis` runs, resolving the conflict without touching `tsconfig.json`.
+**Lesson:** Never try to resolve a JSX transform mismatch by editing `tsconfig.json` in a Next.js project — that will break the production build. In Vitest 4+, the `esbuild` config key is ignored when oxc is active; `@vitejs/plugin-react` is the correct override.
+**Preventive guideline:** When setting up Vitest in a Next.js project, always install and configure `@vitejs/plugin-react` in `vitest.config.ts` from the start. Do not rely on `esbuild` config keys — they are silently ignored in Vitest 4+.
+
+---
+
 > Whenever Claude makes a structural mistake, breaks a build, introduces invalid imports, creates broken logic, causes a deployment failure, or suggests over-engineered solutions, it **must**:
 > 1. Acknowledge the mistake clearly.
 > 2. Explain why it happened.

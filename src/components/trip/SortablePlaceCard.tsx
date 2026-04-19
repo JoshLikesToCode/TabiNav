@@ -2,7 +2,7 @@
 
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { GripVertical } from "lucide-react";
+import { ArrowRightLeft, GripVertical } from "lucide-react";
 import { PlaceCard } from "./PlaceCard";
 import type { Place } from "@/lib/types";
 
@@ -12,6 +12,7 @@ interface SortablePlaceCardProps {
   startTime?: string;
   endTime?: string;
   onPlaceClick: (place: Place, startTime?: string, endTime?: string) => void;
+  onSwap: (place: Place) => void;
 }
 
 export function SortablePlaceCard({
@@ -20,6 +21,7 @@ export function SortablePlaceCard({
   startTime,
   endTime,
   onPlaceClick,
+  onSwap,
 }: SortablePlaceCardProps) {
   const {
     attributes,
@@ -38,7 +40,7 @@ export function SortablePlaceCard({
         transition,
       }}
       // Fade the origin slot to indicate the card is "in flight"
-      className={`flex items-start gap-1 ${isDragging ? "opacity-0" : ""}`}
+      className={`group flex items-start gap-1 ${isDragging ? "opacity-0" : ""}`}
     >
       {/* Drag handle — only this element triggers the drag */}
       <button
@@ -63,6 +65,19 @@ export function SortablePlaceCard({
           endTime={endTime}
         />
       </div>
+
+      {/* Swap button — visible on hover */}
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          onSwap(place);
+        }}
+        className="mt-[18px] shrink-0 opacity-0 transition-opacity group-hover:opacity-100 text-muted-foreground/40 hover:text-primary"
+        aria-label="Swap place"
+        tabIndex={-1}
+      >
+        <ArrowRightLeft className="h-4 w-4" />
+      </button>
     </div>
   );
 }
